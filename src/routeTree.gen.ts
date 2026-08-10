@@ -10,33 +10,79 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BidhaaRouteImport } from './routes/bidhaa'
+import { Route as KuhusuRouteImport } from './routes/kuhusu'
+import { Route as MawasilianoRouteImport } from './routes/mawasiliano'
+import { Route as ProductHandleRouteImport } from './routes/product.$handle'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BidhaaRoute = BidhaaRouteImport.update({
+  id: '/bidhaa',
+  path: '/bidhaa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KuhusuRoute = KuhusuRouteImport.update({
+  id: '/kuhusu',
+  path: '/kuhusu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MawasilianoRoute = MawasilianoRouteImport.update({
+  id: '/mawasiliano',
+  path: '/mawasiliano',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductHandleRoute = ProductHandleRouteImport.update({
+  id: '/product/$handle',
+  path: '/product/$handle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bidhaa': typeof BidhaaRoute
+  '/kuhusu': typeof KuhusuRoute
+  '/mawasiliano': typeof MawasilianoRoute
+  '/product/$handle': typeof ProductHandleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bidhaa': typeof BidhaaRoute
+  '/kuhusu': typeof KuhusuRoute
+  '/mawasiliano': typeof MawasilianoRoute
+  '/product/$handle': typeof ProductHandleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bidhaa': typeof BidhaaRoute
+  '/kuhusu': typeof KuhusuRoute
+  '/mawasiliano': typeof MawasilianoRoute
+  '/product/$handle': typeof ProductHandleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/bidhaa' | '/kuhusu' | '/mawasiliano' | '/product/$handle'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/bidhaa' | '/kuhusu' | '/mawasiliano' | '/product/$handle'
+  id:
+    | '__root__'
+    | '/'
+    | '/bidhaa'
+    | '/kuhusu'
+    | '/mawasiliano'
+    | '/product/$handle'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BidhaaRoute: typeof BidhaaRoute
+  KuhusuRoute: typeof KuhusuRoute
+  MawasilianoRoute: typeof MawasilianoRoute
+  ProductHandleRoute: typeof ProductHandleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +94,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bidhaa': {
+      id: '/bidhaa'
+      path: '/bidhaa'
+      fullPath: '/bidhaa'
+      preLoaderRoute: typeof BidhaaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kuhusu': {
+      id: '/kuhusu'
+      path: '/kuhusu'
+      fullPath: '/kuhusu'
+      preLoaderRoute: typeof KuhusuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mawasiliano': {
+      id: '/mawasiliano'
+      path: '/mawasiliano'
+      fullPath: '/mawasiliano'
+      preLoaderRoute: typeof MawasilianoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product/$handle': {
+      id: '/product/$handle'
+      path: '/product/$handle'
+      fullPath: '/product/$handle'
+      preLoaderRoute: typeof ProductHandleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BidhaaRoute: BidhaaRoute,
+  KuhusuRoute: KuhusuRoute,
+  MawasilianoRoute: MawasilianoRoute,
+  ProductHandleRoute: ProductHandleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

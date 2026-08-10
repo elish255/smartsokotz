@@ -11,6 +11,10 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Toaster } from "@/components/ui/sonner";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
+import { useCartSync } from "@/hooks/useCartSync";
 
 function NotFoundComponent() {
   return (
@@ -77,16 +81,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "GG STORE | Duka la Elektroniki na Vifaa vya Nyumbani" },
+      {
+        name: "description",
+        content:
+          "GG STORE ni duka la mtandaoni Tanzania: simu, laptop, TV na vifaa vya nyumbani kwa bei nafuu, malipo salama na usafirishaji wa haraka.",
+      },
+      { name: "author", content: "GG STORE" },
+      { property: "og:title", content: "GG STORE | Duka la Elektroniki" },
+      {
+        property: "og:description",
+        content: "Nunua elektroniki na vifaa vya nyumbani mtandaoni kwa bei nafuu.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap",
+      },
       {
         rel: "stylesheet",
         href: appCss,
@@ -119,8 +136,22 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <AppShell />
     </QueryClientProvider>
+  );
+}
+
+function AppShell() {
+  useCartSync();
+  return (
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
+      <SiteHeader />
+      <main className="flex-1">
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </main>
+      <SiteFooter />
+      <Toaster position="top-center" richColors />
+    </div>
   );
 }
