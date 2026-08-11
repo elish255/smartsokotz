@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { MobileTabBar } from "@/components/MobileTabBar";
 import { useCartSync } from "@/hooks/useCartSync";
 
 function NotFoundComponent() {
@@ -151,6 +152,8 @@ function AppShell() {
         <Outlet />
       </main>
       <SiteFooter />
+      <div className="h-16 md:hidden" />
+      <MobileTabBar />
       <Toaster position="top-center" richColors />
     </div>
   );

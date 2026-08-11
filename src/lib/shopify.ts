@@ -12,6 +12,7 @@ export interface ShopifyProduct {
     description: string;
     handle: string;
     productType?: string;
+    vendor?: string;
     tags?: string[];
     priceRange: { minVariantPrice: { amount: string; currencyCode: string } };
     images: { edges: Array<{ node: { url: string; altText: string | null } }> };
@@ -36,6 +37,7 @@ const PRODUCT_FIELDS = `
   description
   handle
   productType
+  vendor
   tags
   priceRange { minVariantPrice { amount currencyCode } }
   images(first: 5) { edges { node { url altText } } }
