@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShieldCheck, Truck, Headphones, CreditCard, ArrowRight } from "lucide-react";
 import heroImage from "@/assets/hero-electronics.jpg";
 import { Button } from "@/components/ui/button";
-import { ProductGrid } from "@/components/ProductGrid";
+import { ProductBrowser } from "@/components/ProductBrowser";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -80,8 +80,8 @@ function Index() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12">
-        <div className="mb-6 flex items-end justify-between">
+      <div className="mx-auto max-w-6xl px-4 pt-10">
+        <div className="flex items-end justify-between">
           <div>
             <h2 className="font-display text-2xl font-bold">Bidhaa Zetu</h2>
             <p className="text-sm text-muted-foreground">Chagua kutoka kwenye kolekshemu yetu</p>
@@ -90,8 +90,8 @@ function Index() {
             Ona zote
           </Link>
         </div>
-        <ProductGrid />
-      </section>
+      </div>
+      <ProductBrowser />
     </>
   );
 }
