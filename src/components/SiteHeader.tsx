@@ -46,19 +46,6 @@ export function SiteHeader() {
         </nav>
         <CartDrawer />
       </div>
-      <nav className="flex items-center gap-4 overflow-x-auto border-t border-border px-4 py-2 md:hidden">
-        {navItems.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            activeOptions={{ exact: item.to === "/" }}
-            activeProps={{ className: "text-brand" }}
-            className="text-sm font-medium whitespace-nowrap text-muted-foreground"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
     </header>
   );
 }
