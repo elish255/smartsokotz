@@ -1,11 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import { Mail, MapPin, Phone } from "lucide-react";
+import logo from "@/assets/smart-soko-logo.png.asset.json";
 
 export function SiteFooter() {
   return (
     <footer className="mt-16 bg-surface text-surface-foreground">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 md:grid-cols-3">
         <div>
+          <img
+            src={logo.url}
+            alt="Nembo ya SMART SOKO"
+            width={56}
+            height={56}
+            loading="lazy"
+            className="mb-2 h-14 w-14 rounded-lg bg-white object-contain p-1"
+          />
           <span className="font-display text-lg font-bold">SMART SOKO</span>
           <p className="mt-3 max-w-xs text-sm text-surface-foreground/70">
             Duka la mtandaoni la vifaa vya elektroniki na vifaa vya nyumbani, tukiwahudumia
