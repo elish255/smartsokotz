@@ -4,13 +4,13 @@ import { Mail, MapPin, Phone } from "lucide-react";
 export const Route = createFileRoute("/mawasiliano")({
   head: () => ({
     meta: [
-      { title: "Mawasiliano | GG STORE" },
+      { title: "Mawasiliano | SMART SOKO" },
       {
         name: "description",
         content:
-          "Wasiliana na GG STORE kwa simu, WhatsApp au barua pepe kwa maswali kuhusu bidhaa, oda na usafirishaji.",
+          "Wasiliana na SMART SOKO kwa simu, WhatsApp au barua pepe kwa maswali kuhusu bidhaa, oda na usafirishaji.",
       },
-      { property: "og:title", content: "Wasiliana na GG STORE" },
+      { property: "og:title", content: "Wasiliana na SMART SOKO" },
       {
         property: "og:description",
         content: "Namba za simu, barua pepe na eneo la duka letu Dar es Salaam.",
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/mawasiliano")({
 
 const channels = [
   { icon: Phone, label: "Simu / WhatsApp", value: "+255 700 000 000", href: "tel:+255700000000" },
-  { icon: Mail, label: "Barua pepe", value: "info@ggstore.co.tz", href: "mailto:info@ggstore.co.tz" },
+  { icon: Mail, label: "Barua pepe", value: "info@smartsoko.co.tz", href: "mailto:info@smartsoko.co.tz" },
   { icon: MapPin, label: "Eneo", value: "Dar es Salaam, Tanzania", href: null },
 ];
 

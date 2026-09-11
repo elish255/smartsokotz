@@ -7,16 +7,16 @@ import { ProductGrid } from "@/components/ProductGrid";
 export const Route = createFileRoute("/bidhaa")({
   head: () => ({
     meta: [
-      { title: "Bidhaa Zote | GG STORE" },
+      { title: "Bidhaa Zote | SMART SOKO" },
       {
         name: "description",
         content:
-          "Tazama bidhaa zote za GG STORE: simu, laptop, TV, spika na vifaa vya nyumbani kwa bei nafuu Tanzania.",
+          "Tazama bidhaa zote za SMART SOKO: simu, laptop, TV, spika na vifaa vya nyumbani kwa bei nafuu Tanzania.",
       },
-      { property: "og:title", content: "Bidhaa Zote | GG STORE" },
+      { property: "og:title", content: "Bidhaa Zote | SMART SOKO" },
       {
         property: "og:description",
-        content: "Kolekshemu kamili ya elektroniki na vifaa vya nyumbani GG STORE.",
+        content: "Kolekshemu kamili ya elektroniki na vifaa vya nyumbani SMART SOKO.",
       },
     ],
   }),

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Phone, Zap } from "lucide-react";
 import { CartDrawer } from "@/components/CartDrawer";
+import logo from "@/assets/smart-soko-logo.png.asset.json";
 
 const navItems = [
   { to: "/", label: "Nyumbani" },
@@ -26,10 +27,14 @@ export function SiteHeader() {
       </div>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand font-display text-sm font-bold text-brand-foreground">
-            GG
-          </span>
-          <span className="font-display text-lg font-bold tracking-tight">GG STORE</span>
+          <img
+            src={logo.url}
+            alt="Nembo ya SMART SOKO"
+            width={40}
+            height={40}
+            className="h-10 w-10 object-contain"
+          />
+          <span className="font-display text-lg font-bold tracking-tight">SMART SOKO</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex">
           {navItems.map((item) => (

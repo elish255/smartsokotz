@@ -82,14 +82,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GG STORE | Duka la Elektroniki na Vifaa vya Nyumbani" },
+      { title: "SMART SOKO | Duka la Elektroniki na Vifaa vya Nyumbani" },
       {
         name: "description",
         content:
-          "GG STORE ni duka la mtandaoni Tanzania: simu, laptop, TV na vifaa vya nyumbani kwa bei nafuu, malipo salama na usafirishaji wa haraka.",
+          "SMART SOKO ni duka la mtandaoni Tanzania: simu, laptop, TV na vifaa vya nyumbani kwa bei nafuu, malipo salama na usafirishaji wa haraka.",
       },
-      { name: "author", content: "GG STORE" },
-      { property: "og:title", content: "GG STORE | Duka la Elektroniki" },
+      { name: "author", content: "SMART SOKO" },
+      { property: "og:title", content: "SMART SOKO | Duka la Elektroniki" },
       {
         property: "og:description",
         content: "Nunua elektroniki na vifaa vya nyumbani mtandaoni kwa bei nafuu.",
@@ -109,7 +109,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,

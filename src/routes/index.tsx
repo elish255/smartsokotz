@@ -7,13 +7,13 @@ import { ProductBrowser } from "@/components/ProductBrowser";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "GG STORE | Elektroniki na Vifaa vya Nyumbani Tanzania" },
+      { title: "SMART SOKO | Elektroniki na Vifaa vya Nyumbani Tanzania" },
       {
         name: "description",
         content:
-          "Nunua simu, laptop, TV na vifaa vya nyumbani GG STORE. Bei nafuu, bidhaa halisi, malipo salama na usafirishaji nchi nzima.",
+          "Nunua simu, laptop, TV na vifaa vya nyumbani SMART SOKO. Bei nafuu, bidhaa halisi, malipo salama na usafirishaji nchi nzima.",
       },
-      { property: "og:title", content: "GG STORE | Elektroniki na Vifaa vya Nyumbani" },
+      { property: "og:title", content: "SMART SOKO | Elektroniki na Vifaa vya Nyumbani" },
       {
         property: "og:description",
         content: "Duka la mtandaoni la elektroniki Tanzania — bei nafuu na huduma ya haraka.",
@@ -37,7 +37,7 @@ function Index() {
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-14 md:grid-cols-2 md:py-20">
           <div className="text-surface-foreground">
             <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-accent">
-              Karibu GG STORE
+              Karibu SMART SOKO
             </span>
             <h1 className="mt-4 font-display text-4xl leading-tight font-bold md:text-5xl">
               Elektroniki na vifaa vya nyumbani kwa bei ya kushangaza
@@ -57,7 +57,7 @@ function Index() {
           <div className="overflow-hidden rounded-xl shadow-lift">
             <img
               src={heroImage}
-              alt="Vifaa vya elektroniki na vifaa vya nyumbani vya GG STORE"
+              alt="Vifaa vya elektroniki na vifaa vya nyumbani vya SMART SOKO"
               width={1600}
               height={1008}
               className="h-full w-full object-cover"
