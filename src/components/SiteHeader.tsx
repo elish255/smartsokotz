@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { Phone, Zap } from "lucide-react";
 import { CartDrawer } from "@/components/CartDrawer";
-import logo from "@/assets/smart-soko-logo.png.asset.json";
+import logo from "@/assets/smart-soko-logo.png";
 
 const navItems = [
   { to: "/", label: "Nyumbani" },
@@ -12,29 +11,16 @@ const navItems = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
-      <div className="bg-surface text-surface-foreground">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-1.5 text-xs">
-          <span className="flex items-center gap-1.5">
-            <Zap className="h-3.5 w-3.5 text-accent" />
-            Usafirishaji wa haraka Tanzania nzima
-          </span>
-          <a href="tel:+255700000000" className="flex items-center gap-1.5 hover:text-accent">
-            <Phone className="h-3.5 w-3.5" />
-            +255 700 000 000
-          </a>
-        </div>
-      </div>
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link to="/" className="flex items-center gap-2">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
+        <Link to="/" aria-label="Smart Soko - Nyumbani" className="flex min-w-0 items-center">
           <img
-            src={logo.url}
-            alt="Nembo ya SMART SOKO"
-            width={40}
-            height={40}
-            className="h-10 w-10 object-contain"
+            src={logo}
+            alt="SMART SOKO"
+            width={220}
+            height={120}
+            className="h-auto w-[138px] object-contain sm:w-[175px]"
           />
-          <span className="font-display text-lg font-bold tracking-tight">SMART SOKO</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex">
           {navItems.map((item) => (

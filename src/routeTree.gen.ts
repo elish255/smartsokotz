@@ -14,6 +14,7 @@ import { Route as BidhaaRouteImport } from './routes/bidhaa'
 import { Route as KuhusuRouteImport } from './routes/kuhusu'
 import { Route as MawasilianoRouteImport } from './routes/mawasiliano'
 import { Route as ProductHandleRouteImport } from './routes/product.$handle'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const ProductHandleRoute = ProductHandleRouteImport.update({
   path: '/product/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/kuhusu': typeof KuhusuRoute
   '/mawasiliano': typeof MawasilianoRoute
   '/product/$handle': typeof ProductHandleRoute
+  '/checkout': typeof CheckoutRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/kuhusu': typeof KuhusuRoute
   '/mawasiliano': typeof MawasilianoRoute
   '/product/$handle': typeof ProductHandleRoute
+  '/checkout': typeof CheckoutRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +70,13 @@ export interface FileRoutesById {
   '/kuhusu': typeof KuhusuRoute
   '/mawasiliano': typeof MawasilianoRoute
   '/product/$handle': typeof ProductHandleRoute
+  '/checkout': typeof CheckoutRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/bidhaa' | '/kuhusu' | '/mawasiliano' | '/product/$handle'
+  fullPaths: '/' | '/bidhaa' | '/kuhusu' | '/mawasiliano' | '/product/$handle' | '/checkout'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/bidhaa' | '/kuhusu' | '/mawasiliano' | '/product/$handle'
+  to: '/' | '/bidhaa' | '/kuhusu' | '/mawasiliano' | '/product/$handle' | '/checkout'
   id:
     | '__root__'
     | '/'
@@ -75,6 +84,7 @@ export interface FileRouteTypes {
     | '/kuhusu'
     | '/mawasiliano'
     | '/product/$handle'
+    | '/checkout'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,6 +93,7 @@ export interface RootRouteChildren {
   KuhusuRoute: typeof KuhusuRoute
   MawasilianoRoute: typeof MawasilianoRoute
   ProductHandleRoute: typeof ProductHandleRoute
+  CheckoutRoute: typeof CheckoutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -122,6 +133,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductHandleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -131,6 +149,7 @@ const rootRouteChildren: RootRouteChildren = {
   KuhusuRoute: KuhusuRoute,
   MawasilianoRoute: MawasilianoRoute,
   ProductHandleRoute: ProductHandleRoute,
+  CheckoutRoute: CheckoutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
