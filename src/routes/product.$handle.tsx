@@ -10,16 +10,16 @@ import { fetchProductByHandle, formatPrice } from "@/lib/shopify";
 export const Route = createFileRoute("/product/$handle")({
   head: ({ params }) => ({
     meta: [
-      { title: `${params.handle.replace(/-/g, " ")} | GG STORE` },
+      { title: `${params.handle.replace(/-/g, " ")} | SMART SOKO` },
       {
         name: "description",
         content:
-          "Maelezo kamili ya bidhaa, bei na upatikanaji GG STORE — elektroniki na vifaa vya nyumbani Tanzania.",
+          "Maelezo kamili ya bidhaa, bei na upatikanaji SMART SOKO — elektroniki na vifaa vya nyumbani Tanzania.",
       },
-      { property: "og:title", content: `${params.handle.replace(/-/g, " ")} | GG STORE` },
+      { property: "og:title", content: `${params.handle.replace(/-/g, " ")} | SMART SOKO` },
       {
         property: "og:description",
-        content: "Nunua bidhaa hii GG STORE kwa bei nafuu na usafirishaji wa haraka.",
+        content: "Nunua bidhaa hii SMART SOKO kwa bei nafuu na usafirishaji wa haraka.",
       },
     ],
   }),

@@ -29,7 +29,7 @@ export function SiteHeader() {
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand font-display text-sm font-bold text-brand-foreground">
             GG
           </span>
-          <span className="font-display text-lg font-bold tracking-tight">GG STORE</span>
+          <span className="font-display text-lg font-bold tracking-tight">SMART SOKO</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex">
           {navItems.map((item) => (

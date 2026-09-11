@@ -4,13 +4,13 @@ import { Store, Truck, ShieldCheck } from "lucide-react";
 export const Route = createFileRoute("/kuhusu")({
   head: () => ({
     meta: [
-      { title: "Kuhusu Sisi | GG STORE" },
+      { title: "Kuhusu Sisi | SMART SOKO" },
       {
         name: "description",
         content:
-          "GG STORE ni duka la Kitanzania linalouza vifaa vya elektroniki na vifaa vya nyumbani vyenye ubora kwa bei nafuu.",
+          "SMART SOKO ni duka la Kitanzania linalouza vifaa vya elektroniki na vifaa vya nyumbani vyenye ubora kwa bei nafuu.",
       },
-      { property: "og:title", content: "Kuhusu GG STORE" },
+      { property: "og:title", content: "Kuhusu SMART SOKO" },
       {
         property: "og:description",
         content: "Historia yetu, dhamira na huduma tunazotoa kwa wateja Tanzania.",
@@ -29,9 +29,9 @@ const values = [
 function AboutPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="font-display text-3xl font-bold">Kuhusu GG STORE</h1>
+      <h1 className="font-display text-3xl font-bold">Kuhusu SMART SOKO</h1>
       <p className="mt-4 text-muted-foreground">
-        GG STORE ni duka la mtandaoni la Kitanzania linalojishughulisha na uuzaji wa vifaa vya
+        SMART SOKO ni duka la mtandaoni la Kitanzania linalojishughulisha na uuzaji wa vifaa vya
         elektroniki na vifaa vya nyumbani. Tumejikita katika kuleta bidhaa bora kwa bei nafuu,
         tukiwarahisishia wateja wetu kununua wakiwa nyumbani au kazini.
       </p>
