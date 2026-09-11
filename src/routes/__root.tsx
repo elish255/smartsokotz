@@ -86,7 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "SMART SOKO ni duka la mtandaoni Tanzania: simu, laptop, TV na vifaa vya nyumbani kwa bei nafuu, malipo salama na usafirishaji wa haraka.",
+          "SMART SOKO ni duka la mtandaoni Tanzania la bidhaa za elektroniki na vifaa vya nyumbani kwa bei nafuu na malipo salama.",
       },
       { name: "author", content: "SMART SOKO" },
       { property: "og:title", content: "SMART SOKO | Duka la Elektroniki" },

@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Nunua simu, laptop, TV na vifaa vya nyumbani SMART SOKO. Bei nafuu, bidhaa halisi, malipo salama na usafirishaji nchi nzima.",
+          "Pata Bidhaa za Elektroniki na vifaa vya nyumbani kwa bei Nafuu. SMART SOKO hukupa bidhaa bora kwa malipo salama.",
       },
       { property: "og:title", content: "SMART SOKO | Elektroniki na Vifaa vya Nyumbani" },
       {
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
 });
 
 const perks = [
-  { icon: Truck, title: "Usafirishaji Haraka", text: "Tunafikisha nchi nzima ndani ya siku 1-3." },
+  { icon: Truck, title: "Bei Nafuu", text: "Pata bidhaa za elektroniki na vifaa vya nyumbani kwa bei nafuu." },
   { icon: ShieldCheck, title: "Bidhaa Halisi", text: "Kila bidhaa ina dhamana na uhakika." },
   { icon: CreditCard, title: "Malipo Salama", text: "Lipa kwa kadi au mitandao ya simu." },
   { icon: Headphones, title: "Huduma 24/7", text: "Timu yetu ipo tayari kukusaidia." },
@@ -40,11 +40,11 @@ function Index() {
               Karibu SMART SOKO
             </span>
             <h1 className="mt-4 font-display text-4xl leading-tight font-bold md:text-5xl">
-              Elektroniki na vifaa vya nyumbani kwa bei ya kushangaza
+              Pata Bidhaa za Elektroniki na vifaa vya nyumbani kwa bei Nafuu
             </h1>
             <p className="mt-4 max-w-md text-sm text-surface-foreground/80 md:text-base">
               Simu, laptop, TV, friji, majiko na vifaa vingine vya nyumbani — vyote vinapatikana
-              mahali pamoja, vikiletwa mlangoni kwako.
+              mahali pamoja kwa bei nafuu.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Button asChild size="lg" className="bg-brand text-brand-foreground hover:bg-brand/90">

@@ -34,6 +34,40 @@ const LIPA_NUMBER = (import.meta.env.VITE_LIPA_NUMBER as string | undefined) || 
 const BUSINESS_NAME = "SMART SOKO";
 const SHIPPING_FEE = 29000;
 
+type LipaNetwork = {
+  name: string;
+  ussd: string;
+  logo: string;
+  steps: string[];
+};
+
+const LIPA_NETWORKS: LipaNetwork[] = [
+  {
+    name: "Vodacom M-Pesa",
+    ussd: "*150*00#",
+    logo: "https://brandlogos.net/wp-content/uploads/2025/04/vodacom-logo_brandlogos.net_4uzfe.png",
+    steps: ["Bonyeza *150*00#", "Chagua Lipa kwa M-PESA", "Chagua Lipa kwa simu / malipo ya bidhaa"],
+  },
+  {
+    name: "Mixx by Yas",
+    ussd: "*150*01#",
+    logo: "https://www.uminolan.co.tz/assets/images/supa-agent/mixx-by-yas-seeklogo2.png",
+    steps: ["Bonyeza *150*01#", "Chagua Lipa kwa simu", "Chagua huduma ya kulipia bidhaa"],
+  },
+  {
+    name: "Airtel Money",
+    ussd: "*150*60#",
+    logo: "https://nikulipe.com/wp-content/uploads/2022/09/Airtel_logo_PNG1.png",
+    steps: ["Bonyeza *150*60#", "Chagua Lipia Bili / bidhaa", "Chagua huduma ya malipo kwa simu"],
+  },
+  {
+    name: "HaloPesa",
+    ussd: "*150*88#",
+    logo: "https://halopesa.co.tz/images/applications-system.png",
+    steps: ["Bonyeza *150*88#", "Chagua Lipia Bidhaa", "Endelea na malipo ya LIPA NAMBA"],
+  },
+];
+
 function CheckoutPage() {
   const { items, checkoutUrl } = useCartStore();
   const [method, setMethod] = useState<PaymentMethod>(null);
@@ -274,36 +308,71 @@ function CheckoutPage() {
                 }}
               />
               {method === "lipanamba" && showLipaDetails && (
-                <div className="rounded-xl bg-slate-50 p-4">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                   <button
                     type="button"
                     onClick={() => setShowLipaDetails((value) => !value)}
-                    className="flex w-full items-center justify-between text-left font-semibold text-slate-800"
+                    className="flex w-full items-center justify-between border-b border-slate-200 bg-white px-4 py-4 text-left font-semibold text-slate-800"
                   >
-                    <span>Maelezo ya LIPA NAMBA</span>
-                    <ChevronDown className="h-4 w-4" />
+                    <span>Mitandao ya LIPA NAMBA</span>
+                    <ChevronDown className={`h-5 w-5 transition-transform ${showLipaDetails ? "rotate-180" : ""}`} />
                   </button>
-                  <div className="mt-4 space-y-3 text-sm text-slate-600">
-                    <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">Mtandao</label>
-                    <select value={operator} onChange={(e) => setOperator(e.target.value)} className="w-full rounded-lg border bg-white px-3 py-3 outline-none focus:border-blue-500">
-                      <option>Vodacom M-Pesa</option>
-                      <option>Mixx by Yas</option>
-                      <option>Airtel Money</option>
-                      <option>HaloPesa</option>
-                    </select>
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                      <p>1. Fungua huduma ya {operator}.</p>
-                      <p className="mt-1">2. Chagua huduma ya kulipia bidhaa / bili.</p>
-                      <p className="mt-1">3. Weka <strong>LIPA NAMBA</strong>:</p>
-                      <div className="mt-2 flex items-center justify-between rounded-lg bg-white px-3 py-2">
-                        <strong className="text-lg tracking-wide text-slate-900">{LIPA_NUMBER}</strong>
-                        <button type="button" onClick={() => navigator.clipboard?.writeText(LIPA_NUMBER)} className="text-xs font-semibold text-brand">Copy</button>
-                      </div>
-                      <p className="mt-2">4. Weka kiasi cha <strong>{formatPrice(total, currency)}</strong>.</p>
-                      <p className="mt-1">5. Thibitisha kwa PIN yako.</p>
-                      <p className="mt-3 rounded-md bg-white px-3 py-2 text-xs">Jina la biashara: <strong>{BUSINESS_NAME}</strong></p>
-                    </div>
+
+                  <div className="grid gap-2 p-3 sm:grid-cols-2">
+                    {LIPA_NETWORKS.map((network) => (
+                      <button
+                        key={network.name}
+                        type="button"
+                        onClick={() => setOperator(network.name)}
+                        className={`flex items-center gap-3 rounded-xl border bg-white p-3 text-left transition ${
+                          operator === network.name ? "border-brand ring-2 ring-brand/10" : "border-slate-200 hover:border-slate-300"
+                        }`}
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5">
+                          <img src={network.logo} alt={network.name} className="max-h-full max-w-full object-contain" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-slate-900">{network.name}</span>
+                          <span className="block text-xs text-slate-400">{network.ussd}</span>
+                        </span>
+                        {operator === network.name && <Check className="h-4 w-4 shrink-0 text-brand" />}
+                      </button>
+                    ))}
                   </div>
+
+                  {(() => {
+                    const selected = LIPA_NETWORKS.find((network) => network.name === operator) ?? LIPA_NETWORKS[0];
+                    return (
+                      <div className="border-t border-slate-200 bg-white p-4">
+                        <div className="mb-3 flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5">
+                            <img src={selected.logo} alt={selected.name} className="max-h-full max-w-full object-contain" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{selected.name}</p>
+                            <p className="text-xs text-slate-500">{selected.ussd}</p>
+                          </div>
+                        </div>
+                        <ol className="space-y-2 text-sm text-slate-600">
+                          {selected.steps.map((step, index) => (
+                            <li key={step} className="flex gap-3">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-brand">{index + 1}</span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">LIPA NAMBA</p>
+                          <div className="mt-2 flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5">
+                            <strong className="text-lg tracking-wide text-slate-900">{LIPA_NUMBER}</strong>
+                            <button type="button" onClick={() => navigator.clipboard?.writeText(LIPA_NUMBER)} className="text-xs font-semibold text-brand">Copy</button>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-600">Weka kiasi cha <strong>{formatPrice(total, currency)}</strong>, kisha thibitisha kwa PIN yako.</p>
+                          <p className="mt-2 rounded-md bg-white px-3 py-2 text-xs text-slate-600">Jina la biashara: <strong>{BUSINESS_NAME}</strong></p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/product/$handle")({
       { property: "og:title", content: `${params.handle.replace(/-/g, " ")} | SMART SOKO` },
       {
         property: "og:description",
-        content: "Nunua bidhaa hii SMART SOKO kwa bei nafuu na usafirishaji wa haraka.",
+        content: "Nunua bidhaa hii SMART SOKO kwa bei nafuu na malipo salama.",
       },
     ],
   }),
