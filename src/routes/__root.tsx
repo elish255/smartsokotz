@@ -89,6 +89,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "SMART SOKO ni duka la mtandaoni Tanzania la bidhaa za elektroniki na vifaa vya nyumbani kwa bei nafuu na malipo salama.",
       },
       { name: "author", content: "SMART SOKO" },
+      { name: "zonmpay-verification", content: "zmp-verify-3f661249d8ba85d72f17bbb2ba510c61" },
       { property: "og:title", content: "SMART SOKO | Duka la Elektroniki" },
       {
         property: "og:description",

@@ -2,11 +2,21 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { fetchProducts } from "@/lib/shopify";
+import { getShopflixProducts } from "@/lib/shopflix";
 
 export function useProducts(search?: string) {
   return useQuery({
     queryKey: ["products", search ?? ""],
-    queryFn: () => fetchProducts(50, search || undefined),
+    queryFn: async () => {
+      const [shopifyProducts, shopflixProducts] = await Promise.all([
+        fetchProducts(50, search || undefined),
+        Promise.resolve(getShopflixProducts()),
+      ]);
+      const local = search
+        ? shopflixProducts.filter((p) => `${p.node.title} ${p.node.vendor ?? ""} ${p.node.productType ?? ""}`.toLowerCase().includes(search.toLowerCase()))
+        : shopflixProducts;
+      return [...shopifyProducts, ...local];
+    },
   });
 }
 

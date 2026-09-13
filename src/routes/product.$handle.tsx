@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
 import { fetchProductByHandle, formatPrice } from "@/lib/shopify";
+import { getShopflixProductByHandle } from "@/lib/shopflix";
 
 export const Route = createFileRoute("/product/$handle")({
   head: ({ params }) => ({
@@ -30,7 +31,7 @@ function ProductPage() {
   const { handle } = Route.useParams();
   const { data, isLoading } = useQuery({
     queryKey: ["product", handle],
-    queryFn: () => fetchProductByHandle(handle),
+    queryFn: async () => (await fetchProductByHandle(handle)) ?? getShopflixProductByHandle(handle),
   });
   const addItem = useCartStore((state) => state.addItem);
   const isAdding = useCartStore((state) => state.isLoading);

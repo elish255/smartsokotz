@@ -188,6 +188,15 @@ export const useCartStore = create<CartStore>()(
 
       addItem: async (item) => {
         const { items, cartId, clearCart } = get();
+        if (item.variantId.startsWith("shopflix:")) {
+          const existingLocal = items.find((i) => i.variantId === item.variantId);
+          set({
+            items: existingLocal
+              ? items.map((i) => i.variantId === item.variantId ? { ...i, quantity: i.quantity + item.quantity } : i)
+              : [...items, { ...item, lineId: null }],
+          });
+          return;
+        }
         const existingItem = items.find((i) => i.variantId === item.variantId);
 
         set({ isLoading: true });
@@ -195,10 +204,11 @@ export const useCartStore = create<CartStore>()(
           if (!cartId) {
             const result = await createShopifyCart({ ...item, lineId: null });
             if (result) {
+              const currentItems = get().items;
               set({
                 cartId: result.cartId,
                 checkoutUrl: result.checkoutUrl,
-                items: [{ ...item, lineId: result.lineId }],
+                items: [...currentItems, { ...item, lineId: result.lineId }],
               });
             }
           } else if (existingItem) {
@@ -239,6 +249,10 @@ export const useCartStore = create<CartStore>()(
 
         const { items, cartId, clearCart } = get();
         const item = items.find((i) => i.variantId === variantId);
+        if (item?.variantId.startsWith("shopflix:")) {
+          set({ items: items.map((i) => i.variantId === variantId ? { ...i, quantity } : i) });
+          return;
+        }
         if (!item?.lineId || !cartId) return;
 
         set({ isLoading: true });
@@ -262,6 +276,11 @@ export const useCartStore = create<CartStore>()(
       removeItem: async (variantId) => {
         const { items, cartId, clearCart } = get();
         const item = items.find((i) => i.variantId === variantId);
+        if (item?.variantId.startsWith("shopflix:")) {
+          const newItems = items.filter((i) => i.variantId !== variantId);
+          set({ items: newItems });
+          return;
+        }
         if (!item?.lineId || !cartId) return;
 
         set({ isLoading: true });
