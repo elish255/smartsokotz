@@ -18,6 +18,7 @@ export const Route = createFileRoute("/")({
         property: "og:description",
         content: "Duka la mtandaoni la elektroniki Tanzania — bei nafuu na huduma ya haraka.",
       },
+      { name: "zonmpay-verification", content: "zmp-verify-3f661249d8ba85d72f17bbb2ba510c61" },
     ],
   }),
   component: Index,
