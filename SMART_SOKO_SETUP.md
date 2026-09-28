@@ -25,25 +25,25 @@ Server-only:
 - `FIMIPAY_CURRENCY=TZS`
 - `FIMIPAY_CREATE_PAYMENT_URL=https://fimipay.com/api/v1/payment/create_order`
 - `FIMIPAY_ORDER_STATUS_URL=https://fimipay.com/api/v1/payment/order_status`
-- `GOOGLE_MAPS_API_KEY`
 
 Do not prefix secret keys with `VITE_`.
 
 ## 3. Delivery
-Delivery origin is Kariakoo Market, Dar es Salaam.
+Delivery is calculated offline from Kariakoo using predefined delivery zones.
 
-The server calls Google Maps Routes API to calculate driving distance to the customer's region + district + place.
-Rate: `TZS 2,000 / km`, rounded up to the next whole kilometre.
-For Dar es Salaam, minimum delivery fees are:
-- Ilala: 5,000
-- Kinondoni: 7,000
-- Temeke: 10,000
-- Ubungo: 7,000
-- Kigamboni: 12,000
+No Google Maps API key or Google Cloud billing is required.
 
-For other regions, the region minimum in `src/data/tanzania.ts` is used. The distance calculation can still produce a higher amount.
+Rate: `TZS 2,000 / estimated km`.
+Dar es Salaam district estimates:
+- Ilala: 3 km
+- Kinondoni: 8 km
+- Temeke: 10 km
+- Ubungo: 12 km
+- Kigamboni: 15 km
 
-The Pay button remains disabled until the delivery details are complete and Google Maps returns a distance.
+Other regions use a predefined regional delivery distance. The value is an estimate for pricing, not live road distance.
+
+The Pay button remains disabled until the delivery details are complete and the offline delivery calculation succeeds.
 
 ## 4. Cart + registration
 The cart is persisted in browser localStorage. If a visitor presses `Weka kikapuni` while not logged in:
