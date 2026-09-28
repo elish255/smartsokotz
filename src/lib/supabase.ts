@@ -49,7 +49,13 @@ async function authRequest(path: string, init: RequestInit = {}) {
   const text = await response.text();
   let data: any = {};
   try { data = text ? JSON.parse(text) : {}; } catch { data = { message: text }; }
-  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || data.error || "Supabase authentication failed");
+  if (!response.ok) {
+    const message = data.msg || data.message || data.error_description || data.error || "Supabase authentication failed";
+    if (response.status === 500 && /database error saving new user/i.test(String(message))) {
+      throw new Error("Database ya usajili ina tatizo. Run supabase/SMART_SOKO_REGISTRATION_REPAIR.sql kwenye Supabase SQL Editor, kisha jaribu tena.");
+    }
+    throw new Error(message);
+  }
   return data;
 }
 

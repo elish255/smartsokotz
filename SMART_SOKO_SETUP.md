@@ -55,3 +55,11 @@ The cart is persisted in browser localStorage. If a visitor presses `Weka kikapu
 ## 5. FimiPay
 FimiPay is used only for the checkout payment push. The request contains the final product subtotal + delivery fee.
 Payment status is checked through the FimiPay order-status endpoint.
+
+## Registration error repair
+
+Kama `/auth/v1/signup` inarudisha `500` na ujumbe `Database error saving new user`, tumia:
+
+`supabase/SMART_SOKO_REGISTRATION_REPAIR.sql`
+
+SQL hii inarekebisha `public.profiles` na trigger ya `auth.users` bila kufuta `auth.users`. Baada ya ku-run SQL, jaribu registration tena.
