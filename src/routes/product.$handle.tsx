@@ -5,6 +5,9 @@ import { ArrowLeft, Loader2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
+import { useAuth } from "@/hooks/useAuth";
+import { getStoredSession } from "@/lib/supabase";
+import { savePendingCartItem } from "@/lib/pendingCart";
 import { fetchProductByHandle, formatPrice } from "@/lib/shopify";
 import { getShopflixProductByHandle } from "@/lib/shopflix";
 
@@ -35,6 +38,7 @@ function ProductPage() {
   });
   const addItem = useCartStore((state) => state.addItem);
   const isAdding = useCartStore((state) => state.isLoading);
+  const { user } = useAuth();
   const [variantId, setVariantId] = useState<string | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
 
@@ -65,14 +69,20 @@ function ProductPage() {
 
   const handleAddToCart = async () => {
     if (!selected) return;
-    await addItem({
+    const pendingItem = {
       product: data,
       variantId: selected.id,
       variantTitle: selected.title,
       price: selected.price,
       quantity: 1,
       selectedOptions: selected.selectedOptions || [],
-    });
+    };
+    if (!user && !getStoredSession()) {
+      savePendingCartItem(pendingItem);
+      window.location.href = "/register";
+      return;
+    }
+    await addItem(pendingItem);
     toast.success("Imeongezwa kikapuni", { description: node.title });
   };
 

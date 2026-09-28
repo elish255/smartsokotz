@@ -223,7 +223,7 @@ export const useCartStore = create<CartStore>()(
                 ),
               });
             } else if (result.cartNotFound) {
-              clearCart();
+              set({ cartId: null, checkoutUrl: null });
             }
           } else {
             const result = await addLineToShopifyCart(cartId, { ...item, lineId: null });
@@ -231,7 +231,7 @@ export const useCartStore = create<CartStore>()(
               const currentItems = get().items;
               set({ items: [...currentItems, { ...item, lineId: result.lineId ?? null }] });
             } else if (result.cartNotFound) {
-              clearCart();
+              set({ cartId: null, checkoutUrl: null });
             }
           }
         } catch (error) {
@@ -264,7 +264,7 @@ export const useCartStore = create<CartStore>()(
               items: currentItems.map((i) => (i.variantId === variantId ? { ...i, quantity } : i)),
             });
           } else if (result.cartNotFound) {
-            clearCart();
+            set({ cartId: null, checkoutUrl: null });
           }
         } catch (error) {
           console.error("Failed to update quantity:", error);
@@ -295,7 +295,7 @@ export const useCartStore = create<CartStore>()(
               set({ items: newItems });
             }
           } else if (result.cartNotFound) {
-            clearCart();
+            set({ cartId: null, checkoutUrl: null });
           }
         } catch (error) {
           console.error("Failed to remove item:", error);
@@ -316,7 +316,11 @@ export const useCartStore = create<CartStore>()(
           const data = await storefrontApiRequest(CART_QUERY, { id: cartId });
           if (!data) return;
           const cart = data?.data?.cart;
-          if (!cart || cart.totalQuantity === 0) clearCart();
+          if (!cart || cart.totalQuantity === 0) {
+            // Keep the local cart so a returning customer never loses selected products.
+            // The SMART SOKO checkout uses the persisted local items for the FimiPay order.
+            set({ cartId: null, checkoutUrl: null });
+          }
         } catch (error) {
           console.error("Failed to sync cart with Shopify:", error);
         } finally {

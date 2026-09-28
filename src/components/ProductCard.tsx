@@ -3,11 +3,15 @@ import { ChevronRight, Loader2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
+import { useAuth } from "@/hooks/useAuth";
+import { getStoredSession } from "@/lib/supabase";
+import { savePendingCartItem } from "@/lib/pendingCart";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 
 export function ProductCard({ product }: { product: ShopifyProduct }) {
   const addItem = useCartStore((state) => state.addItem);
   const isLoading = useCartStore((state) => state.isLoading);
+  const { user } = useAuth();
   const node = product.node;
   const variant = node.variants.edges.find((v) => v.node.availableForSale)?.node
     ?? node.variants.edges[0]?.node;
@@ -15,14 +19,20 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
 
   const handleAddToCart = async () => {
     if (!variant) return;
-    await addItem({
+    const pendingItem = {
       product,
       variantId: variant.id,
       variantTitle: variant.title,
       price: variant.price,
       quantity: 1,
       selectedOptions: variant.selectedOptions || [],
-    });
+    };
+    if (!user && !getStoredSession()) {
+      savePendingCartItem(pendingItem);
+      window.location.href = "/register";
+      return;
+    }
+    await addItem(pendingItem);
     toast.success("Imeongezwa kikapuni", { description: node.title });
   };
 

@@ -13,12 +13,14 @@ import {
 import { ShoppingCart, Minus, Plus, Trash2, Loader2 } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
+import { useAuth } from "@/hooks/useAuth";
 
 export function CartDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { items, isLoading, isSyncing, updateQuantity, removeItem, syncCart } =
     useCartStore();
+  const { user } = useAuth();
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce(
     (sum, item) => sum + parseFloat(item.price.amount) * item.quantity,
@@ -33,7 +35,8 @@ export function CartDrawer() {
   const handleCheckout = () => {
     if (items.length === 0 || isLoading || isSyncing) return;
     setIsOpen(false);
-    navigate({ to: "/checkout" });
+    if (!user) navigate({ to: "/login" });
+    else navigate({ to: "/checkout" });
   };
 
   return (

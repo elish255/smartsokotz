@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import React, { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -16,6 +16,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { useCartSync } from "@/hooks/useCartSync";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { clearPendingCartItem, readPendingCartItem } from "@/lib/pendingCart";
+import { useCartStore } from "@/stores/cartStore";
 
 function NotFoundComponent() {
   return (
@@ -139,13 +142,27 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
 
 function AppShell() {
   useCartSync();
+  const { user } = useAuth();
+  const addItem = useCartStore((state) => state.addItem);
+  const pendingHandled = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!user || pendingHandled.current) return;
+    const pending = readPendingCartItem();
+    if (!pending) return;
+    pendingHandled.current = true;
+    addItem(pending).then(() => clearPendingCartItem()).catch(() => { pendingHandled.current = false; });
+  }, [user, addItem]);
+
   return (
     <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
       <SiteHeader />

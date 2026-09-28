@@ -1,433 +1,141 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
-import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  CreditCard,
-  LockKeyhole,
-  Smartphone,
-  WalletCards,
-} from "lucide-react";
-import { useCartStore } from "@/stores/cartStore";
-import { formatPrice } from "@/lib/shopify";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Check, ChevronDown, Loader2, MapPin, Smartphone, UserRound } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import logo from "@/assets/smart-soko-logo.png";
+import { Label } from "@/components/ui/label";
+import { useCartStore } from "@/stores/cartStore";
+import { useAuth } from "@/hooks/useAuth";
+import { TANZANIA_REGIONS, getRegion } from "@/data/tanzania";
+import { supabaseRest } from "@/lib/supabase";
+import { formatPrice } from "@/lib/shopify";
 
 export const Route = createFileRoute("/checkout")({
-  head: () => ({
-    meta: [
-      { title: "Malipo | SMART SOKO" },
-      {
-        name: "description",
-        content: "Kamilisha oda yako kwa kuchagua njia salama ya malipo kwenye SMART SOKO.",
-      },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Malipo | SMART SOKO" }] }),
   component: CheckoutPage,
 });
 
-type PaymentMethod = "push" | "card" | "lipanamba" | null;
-
-const LIPA_NUMBER = (import.meta.env.VITE_LIPA_NUMBER as string | undefined) || "Haijawekwa";
-const BUSINESS_NAME = "SMART SOKO";
-const SHIPPING_FEE = 29000;
-
-type LipaNetwork = {
-  name: string;
-  ussd: string;
-  logo: string;
-  steps: string[];
-};
-
-const LIPA_NETWORKS: LipaNetwork[] = [
-  {
-    name: "Vodacom M-Pesa",
-    ussd: "*150*00#",
-    logo: "https://brandlogos.net/wp-content/uploads/2025/04/vodacom-logo_brandlogos.net_4uzfe.png",
-    steps: ["Bonyeza *150*00#", "Chagua Lipa kwa M-PESA", "Chagua Lipa kwa simu / malipo ya bidhaa"],
-  },
-  {
-    name: "Mixx by Yas",
-    ussd: "*150*01#",
-    logo: "https://www.uminolan.co.tz/assets/images/supa-agent/mixx-by-yas-seeklogo2.png",
-    steps: ["Bonyeza *150*01#", "Chagua Lipa kwa simu", "Chagua huduma ya kulipia bidhaa"],
-  },
-  {
-    name: "Airtel Money",
-    ussd: "*150*60#",
-    logo: "https://nikulipe.com/wp-content/uploads/2022/09/Airtel_logo_PNG1.png",
-    steps: ["Bonyeza *150*60#", "Chagua Lipia Bili / bidhaa", "Chagua huduma ya malipo kwa simu"],
-  },
-  {
-    name: "HaloPesa",
-    ussd: "*150*88#",
-    logo: "https://halopesa.co.tz/images/applications-system.png",
-    steps: ["Bonyeza *150*88#", "Chagua Lipia Bidhaa", "Endelea na malipo ya LIPA NAMBA"],
-  },
-];
+type DistanceResult = { distanceKm: number; distanceRounded: number; deliveryFee: number; ratePerKm: number; minimumFee: number; duration: string | null };
 
 function CheckoutPage() {
-  const { items, checkoutUrl } = useCartStore();
-  const [method, setMethod] = useState<PaymentMethod>(null);
+  const navigate = useNavigate();
+  const { user, session, loading: authLoading } = useAuth();
+  const { items, clearCart } = useCartStore();
+  const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [operator, setOperator] = useState("Vodacom M-Pesa");
-  const [showLipaDetails, setShowLipaDetails] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
+  const [region, setRegion] = useState("Dar es Salaam");
+  const [district, setDistrict] = useState("");
+  const [place, setPlace] = useState("");
+  const [distance, setDistance] = useState<DistanceResult | null>(null);
+  const [distanceLoading, setDistanceLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const [paid, setPaid] = useState(false);
 
-  const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + Number(item.price.amount) * item.quantity, 0),
-    [items],
-  );
-  const shipping = items.length > 0 ? SHIPPING_FEE : 0;
-  const taxes = Math.round(subtotal * 0.2);
-  const total = subtotal + shipping + taxes;
+  const selectedRegion = getRegion(region);
+  const subtotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.price.amount) * item.quantity, 0), [items]);
+  const deliveryFee = distance?.deliveryFee ?? 0;
+  const total = subtotal + deliveryFee;
   const currency = items[0]?.price.currencyCode ?? "TZS";
 
-  const chooseMethod = (next: Exclude<PaymentMethod, null>) => {
-    setMethod(next);
-    setStatus(null);
-    if (next !== "lipanamba") setShowLipaDetails(false);
+  useEffect(() => {
+    if (!authLoading && !user) return;
+    if (user) {
+      setFullName(String(user.user_metadata?.full_name || ""));
+      setPhone(String(user.user_metadata?.phone || ""));
+    }
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    setDistrict("");
+    setDistance(null);
+  }, [region]);
+
+  if (!items.length && !paid) {
+    return <div className="mx-auto flex min-h-[65vh] max-w-2xl items-center justify-center px-4 py-16"><div className="w-full rounded-2xl border bg-card p-8 text-center shadow-card"><h1 className="font-display text-2xl font-bold">Kikapu chako ni kitupu</h1><p className="mt-2 text-muted-foreground">Ongeza bidhaa kwanza ili kuendelea.</p><Button asChild className="mt-6 bg-brand text-brand-foreground hover:bg-brand/90"><Link to="/bidhaa">Tazama bidhaa</Link></Button></div></div>;
+  }
+
+  if (!authLoading && !user) {
+    return <div className="mx-auto flex min-h-[65vh] max-w-md items-center px-4 py-12"><div className="w-full rounded-2xl border bg-card p-7 text-center shadow-card"><UserRound className="mx-auto h-10 w-10 text-brand"/><h1 className="mt-4 font-display text-2xl font-bold">Ingia ili kulipia</h1><p className="mt-2 text-sm text-muted-foreground">Tunahitaji akaunti yako ili kuhifadhi oda na taarifa za delivery.</p><div className="mt-6 grid gap-3"><Button onClick={() => navigate({ to: "/register" })} className="bg-brand text-brand-foreground">Jisajili</Button><Button variant="outline" onClick={() => navigate({ to: "/login" })}>Ingia</Button></div></div></div>;
+  }
+
+  const calculateDistance = async () => {
+    if (!fullName.trim() || !phone.trim() || !region || !district || !place.trim()) { setMessage("Jaza majina kamili, namba ya simu, mkoa, wilaya na mahali pa kufikishiwa."); return; }
+    setDistanceLoading(true); setMessage(null); setDistance(null);
+    try {
+      const response = await fetch("/api/delivery-distance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fullName, region, district, place, minimumFee: selectedRegion?.minimumFee || 0 }) });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || "Imeshindikana kupata distance.");
+      setDistance(data); setMessage(`Distance kutoka Kariakoo: ${data.distanceKm.toFixed(1)} km. Delivery: ${formatPrice(data.deliveryFee, currency)}.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Imeshindikana kupata bei ya delivery."); }
+    finally { setDistanceLoading(false); }
   };
 
-  const handlePayNow = async () => {
-    if (!method || !items.length) return;
+  const payWithPush = async () => {
+    if (!session?.access_token) { navigate({ to: "/login" }); return; }
+    if (!distance) { setMessage("Kwanza kamilisha taarifa za delivery na bonyeza Hesabu Delivery."); return; }
+    if (!items.length) return;
+    setPaymentLoading(true); setMessage(null);
+    try {
+      const orderItems = items.map(item => ({ productId: item.product.node.id, title: item.product.node.title, variantId: item.variantId, quantity: item.quantity, unitPrice: Number(item.price.amount), lineTotal: Number(item.price.amount) * item.quantity, imageUrl: item.product.node.images?.edges?.[0]?.node?.url || null }));
+      const response = await fetch("/api/fimipay", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: "create", amount: total, subtotal, deliveryFee, distanceKm: distance.distanceKm, deliveryFullName: fullName.trim(), region, district, place: place.trim(), phone: phone.trim(), items: orderItems }) });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || "FimiPay imeshindwa kuanzisha malipo.");
+      setPaymentOrderId(data.orderId); setMessage("Push imetumwa. Thibitisha malipo kwenye simu yako. Mfumo utaangalia status moja kwa moja.");
+      void pollPayment(data.orderId);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Imeshindikana kutuma Push."); }
+    finally { setPaymentLoading(false); }
+  };
 
-    if (method === "push") {
-      const normalized = phone.replace(/\D/g, "");
-      if (normalized.length < 9) {
-        setStatus("Tafadhali weka namba sahihi ya simu.");
-        return;
-      }
-
-      setIsProcessing(true);
-      setStatus(null);
-
+  const pollPayment = async (orderId: string) => {
+    if (!session?.access_token) return;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
       try {
-        const formData = new FormData();
-        formData.append("userID", "smart-soko");
-        formData.append("phone", normalized);
-        formData.append("amount", String(total));
-        formData.append("business", BUSINESS_NAME);
-
-        // This endpoint is configurable so the live payment gateway can be connected
-        // without placing a private credential directly in the page source.
-        const endpoint = import.meta.env.VITE_PAYMENT_ORDER_URL as string | undefined;
-        if (!endpoint) {
-          setStatus("Push imechaguliwa. Weka VITE_PAYMENT_ORDER_URL kwenye mazingira ya deployment ili kutuma ombi la malipo.");
-          return;
-        }
-
-        const response = await fetch(endpoint, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) throw new Error("Payment request failed");
-        setStatus(`Push imetumwa kwenye ${phone}. Tafadhali thibitisha muamala kwenye simu yako.`);
-      } catch {
-        setStatus("Imeshindikana kutuma Push kwa sasa. Tafadhali jaribu tena.");
-      } finally {
-        setIsProcessing(false);
-      }
-      return;
+        const response = await fetch("/api/fimipay", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: "status", orderId }) });
+        const data = await response.json();
+        if (data.paid) { setPaid(true); setMessage("Malipo yamepokelewa. Oda yako imekamilika."); toast.success("Malipo yamefanikiwa"); clearCart(); return; }
+        if (data.order?.payment_status === "failed") { setMessage("Malipo hayajakamilika. Unaweza kujaribu tena."); return; }
+      } catch { /* keep polling */ }
     }
-
-    if (method === "card") {
-      if (!cardName || cardNumber.replace(/\s/g, "").length < 12 || !cardExpiry || cardCvv.length < 3) {
-        setStatus("Tafadhali jaza taarifa zote za kadi.");
-        return;
-      }
-
-      const endpoint = import.meta.env.VITE_CARD_PAYMENT_URL as string | undefined;
-      if (endpoint) {
-        setIsProcessing(true);
-        try {
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ cardName, cardNumber, cardExpiry, cardCvv, amount: total, currency }),
-          });
-          if (!response.ok) throw new Error("Card payment failed");
-          setStatus("Ombi la malipo ya kadi limetumwa.");
-        } catch {
-          setStatus("Imeshindikana kuchakata malipo ya kadi. Tafadhali jaribu tena.");
-        } finally {
-          setIsProcessing(false);
-        }
-      } else if (checkoutUrl) {
-        // The Shopify checkout is the safe fallback for card processing when no
-        // dedicated card gateway endpoint has been configured.
-        window.location.href = checkoutUrl;
-      } else {
-        setStatus("Card payment gateway haijaunganishwa bado.");
-      }
-      return;
-    }
-
-    setStatus("Tumia LIPA NAMBA iliyoonyeshwa hapo juu, kisha thibitisha muamala wako.");
+    setMessage("Bado hatujapata uthibitisho wa mwisho. Unaweza kuangalia tena kwa kujaribu malipo baada ya muda.");
   };
 
-  if (!items.length) {
-    return (
-      <div className="mx-auto flex min-h-[65vh] max-w-2xl items-center justify-center px-4 py-16">
-        <div className="w-full rounded-2xl border bg-card p-8 text-center shadow-card">
-          <h1 className="font-display text-2xl font-bold">Kikapu chako ni kitupu</h1>
-          <p className="mt-2 text-muted-foreground">Ongeza bidhaa kwanza ili kuendelea na malipo.</p>
-          <Button asChild className="mt-6 bg-brand text-brand-foreground hover:bg-brand/90">
-            <Link to="/bidhaa">Tazama bidhaa</Link>
-          </Button>
-        </div>
-      </div>
-    );
+  if (paid) {
+    return <div className="mx-auto flex min-h-[70vh] max-w-lg items-center px-4 py-12"><div className="w-full rounded-3xl border bg-card p-8 text-center shadow-card"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Check className="h-8 w-8" /></div><h1 className="mt-5 font-display text-2xl font-bold">Oda imepokelewa</h1><p className="mt-2 text-sm text-muted-foreground">Malipo yamepokelewa na taarifa zako za delivery zimehifadhiwa.</p><Button asChild className="mt-6 bg-brand text-brand-foreground"><Link to="/">Rudi SMART SOKO</Link></Button></div></div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] px-4 py-6 md:py-10">
+    <div className="min-h-screen bg-slate-50 px-4 py-7 md:py-10">
       <div className="mx-auto max-w-6xl">
-        <Link to="/" className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-brand hover:underline">
-          <ArrowLeft className="h-4 w-4" /> Rudi Smart Soko
-        </Link>
-
-        <div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
-          <section className="rounded-2xl border bg-white p-5 shadow-sm md:p-7">
-            <div className="mb-5 flex items-center justify-between gap-4 border-b pb-5">
-              <div className="min-w-0">
-                <img src={logo} alt="SMART SOKO" width={220} height={120} className="mb-3 h-auto w-[150px] object-contain sm:w-[175px]" />
-                <h1 className="font-display text-2xl font-bold text-slate-900">Order summary</h1>
-                <p className="mt-1 text-sm text-slate-500">Bidhaa {items.reduce((s, i) => s + i.quantity, 0)} kwenye oda</p>
-              </div>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">SMART SOKO</span>
+        <Link to="/" className="text-sm font-medium text-brand">← Endelea kununua</Link>
+        <div className="mt-5 grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+          <section className="rounded-2xl border bg-white p-5 shadow-card sm:p-7">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white"><MapPin className="h-5 w-5" /></span><div><h1 className="font-display text-2xl font-bold">Taarifa za delivery</h1><p className="text-sm text-muted-foreground">Lazima ujaze taarifa hizi kabla ya malipo kuwashwa.</p></div></div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2"><Label>Majina kamili</Label><Input value={fullName} onChange={e => { setFullName(e.target.value); setDistance(null); }} placeholder="Jina kamili la mpokeaji" className="mt-1" /></div>
+              <div><Label>Namba ya simu</Label><Input value={phone} onChange={e => { setPhone(e.target.value); setDistance(null); }} placeholder="0712345678" className="mt-1" /></div>
+              <div><Label>Mkoa</Label><select value={region} onChange={e => setRegion(e.target.value)} className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm">{TANZANIA_REGIONS.map(r => <option key={r.name}>{r.name}</option>)}</select></div>
+              <div><Label>Wilaya</Label><div className="relative mt-1"><select value={district} onChange={e => { setDistrict(e.target.value); setDistance(null); }} className="h-10 w-full appearance-none rounded-md border bg-background px-3 pr-9 text-sm"><option value="">Chagua wilaya</option>{selectedRegion?.districts.map(d => <option key={d}>{d}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-muted-foreground"/></div></div>
+              <div><Label>Mahali anapopokea</Label><Input value={place} onChange={e => { setPlace(e.target.value); setDistance(null); }} placeholder="Mfano: Mtaa, nyumba, eneo" className="mt-1" /></div>
             </div>
-
-            <div className="space-y-4">
-              {items.map((item) => (
-                <div key={item.variantId} className="flex gap-4 rounded-xl border border-slate-100 p-3">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                    {item.product.node.images?.edges?.[0]?.node && (
-                      <img
-                        src={item.product.node.images.edges[0].node.url}
-                        alt={item.product.node.title}
-                        className="h-full w-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="truncate font-semibold text-slate-900">{item.product.node.title}</h2>
-                    <p className="mt-1 text-sm text-slate-500">Qty: {item.quantity}</p>
-                    {item.selectedOptions.length > 0 && (
-                      <p className="text-xs text-slate-400">{item.selectedOptions.map((o) => `${o.name}: ${o.value}`).join(" • ")}</p>
-                    )}
-                  </div>
-                  <div className="text-right font-semibold text-slate-900">
-                    {formatPrice(Number(item.price.amount) * item.quantity, currency)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-7 space-y-3 border-t pt-5 text-sm">
-              <div className="flex justify-between"><span>Subtotal</span><span>{formatPrice(subtotal, currency)}</span></div>
-              <div className="flex justify-between"><span>Shipping</span><span>{formatPrice(shipping, currency)}</span></div>
-              <div className="flex justify-between"><span>Estimated taxes</span><span>{formatPrice(taxes, currency)}</span></div>
-              <div className="flex items-end justify-between border-t pt-4">
-                <span className="text-lg font-bold">Total</span>
-                <span className="font-display text-2xl font-bold">{formatPrice(total, currency)}</span>
-              </div>
-            </div>
+            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900"><p><strong>Delivery:</strong> Tunapima kutoka Kariakoo kwa Google Maps. Kiwango ni <strong>TZS 2,000 kwa km</strong>; mfumo huweka pia minimum ya eneo husika.</p></div>
+            <Button onClick={calculateDistance} disabled={distanceLoading} className="mt-5 w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800">{distanceLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Inapima distance...</> : "Hesabu Delivery"}</Button>
+            {distance && <div className="mt-4 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Distance</span><p className="font-bold">{distance.distanceKm.toFixed(1)} km</p></div><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Delivery</span><p className="font-bold">{formatPrice(distance.deliveryFee, currency)}</p></div><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Kutoka</span><p className="font-bold">Kariakoo</p></div></div>}
+            {message && <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}
+            <div className="mt-7 border-t pt-6"><h2 className="font-display text-lg font-bold">Malipo kwa FimiPay Push</h2><p className="mt-1 text-sm text-muted-foreground">Push itatumwa kwenye namba uliyoweka hapo juu.</p><Button onClick={payWithPush} disabled={!distance || paymentLoading || Boolean(paymentOrderId)} size="lg" className="mt-4 h-12 w-full bg-brand text-brand-foreground hover:bg-brand/90"><Smartphone className="mr-2 h-5 w-5"/>{paymentLoading ? "Inatuma Push..." : paymentOrderId ? "Push imetumwa" : "Lipa kwa Push"}</Button></div>
           </section>
 
-          <section className="rounded-2xl border bg-white p-5 shadow-sm md:p-7">
-            <div className="mb-5">
-              <h2 className="font-display text-2xl font-bold text-slate-900">Payment</h2>
-              <p className="mt-1 text-sm text-slate-500">Choose payment Methods</p>
-            </div>
-
-            <div className="space-y-3">
-              <PaymentChoice
-                selected={method === "push"}
-                icon={<Smartphone className="h-5 w-5" />}
-                title="Lipa kwa USSD Push"
-                description="Tuma ombi la malipo moja kwa moja kwenye simu yako."
-                onClick={() => chooseMethod("push")}
-              />
-              {method === "push" && (
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Namba ya simu</label>
-                  <div className="flex overflow-hidden rounded-lg border bg-white focus-within:ring-2 focus-within:ring-blue-200">
-                    <span className="flex items-center border-r bg-slate-100 px-3 text-sm font-semibold text-slate-600">+255</span>
-                    <Input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="06XXXXXXXX"
-                      inputMode="tel"
-                      className="border-0 shadow-none focus-visible:ring-0"
-                      maxLength={10}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">Push itatumwa kwenda kwenye namba uliyojaza hapo juu.</p>
-                </div>
-              )}
-
-              <PaymentChoice
-                selected={method === "card"}
-                icon={<CreditCard className="h-5 w-5" />}
-                title="Lipa kwa Card"
-                description="Endelea kwenye checkout salama kwa malipo ya kadi."
-                onClick={() => chooseMethod("card")}
-              />
-              {method === "card" && (
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-800"><LockKeyhole className="h-4 w-4" /> Taarifa za Card</div>
-                  <div className="space-y-3">
-                    <Input value={cardName} onChange={(e) => setCardName(e.target.value)} placeholder="Jina lililo kwenye card" autoComplete="cc-name" />
-                    <Input value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="Card number" inputMode="numeric" autoComplete="cc-number" maxLength={19} />
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value)} placeholder="MM/YY" inputMode="numeric" autoComplete="cc-exp" maxLength={5} />
-                      <Input value={cardCvv} onChange={(e) => setCardCvv(e.target.value)} placeholder="CVV" inputMode="numeric" autoComplete="cc-csc" maxLength={4} />
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-slate-500">Taarifa hizi hazihifadhiwi kwenye browser; zitatumwa tu kwenye payment gateway iliyowekwa na mwenye duka.</p>
-                </div>
-              )}
-
-              <PaymentChoice
-                selected={method === "lipanamba"}
-                icon={<WalletCards className="h-5 w-5" />}
-                title="Lipa kwa Lipa namba"
-                description="Chagua mtandao kuona hatua za kulipa kwa LIPA NAMBA."
-                onClick={() => {
-                  chooseMethod("lipanamba");
-                  setShowLipaDetails(true);
-                }}
-              />
-              {method === "lipanamba" && showLipaDetails && (
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                  <button
-                    type="button"
-                    onClick={() => setShowLipaDetails((value) => !value)}
-                    className="flex w-full items-center justify-between border-b border-slate-200 bg-white px-4 py-4 text-left font-semibold text-slate-800"
-                  >
-                    <span>Mitandao ya LIPA NAMBA</span>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${showLipaDetails ? "rotate-180" : ""}`} />
-                  </button>
-
-                  <div className="grid gap-2 p-3 sm:grid-cols-2">
-                    {LIPA_NETWORKS.map((network) => (
-                      <button
-                        key={network.name}
-                        type="button"
-                        onClick={() => setOperator(network.name)}
-                        className={`flex items-center gap-3 rounded-xl border bg-white p-3 text-left transition ${
-                          operator === network.name ? "border-brand ring-2 ring-brand/10" : "border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5">
-                          <img src={network.logo} alt={network.name} className="max-h-full max-w-full object-contain" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-slate-900">{network.name}</span>
-                          <span className="block text-xs text-slate-400">{network.ussd}</span>
-                        </span>
-                        {operator === network.name && <Check className="h-4 w-4 shrink-0 text-brand" />}
-                      </button>
-                    ))}
-                  </div>
-
-                  {(() => {
-                    const selected = LIPA_NETWORKS.find((network) => network.name === operator) ?? LIPA_NETWORKS[0];
-                    return (
-                      <div className="border-t border-slate-200 bg-white p-4">
-                        <div className="mb-3 flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5">
-                            <img src={selected.logo} alt={selected.name} className="max-h-full max-w-full object-contain" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{selected.name}</p>
-                            <p className="text-xs text-slate-500">{selected.ussd}</p>
-                          </div>
-                        </div>
-                        <ol className="space-y-2 text-sm text-slate-600">
-                          {selected.steps.map((step, index) => (
-                            <li key={step} className="flex gap-3">
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-brand">{index + 1}</span>
-                              <span>{step}</span>
-                            </li>
-                          ))}
-                        </ol>
-                        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">LIPA NAMBA</p>
-                          <div className="mt-2 flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5">
-                            <strong className="text-lg tracking-wide text-slate-900">{LIPA_NUMBER}</strong>
-                            <button type="button" onClick={() => navigator.clipboard?.writeText(LIPA_NUMBER)} className="text-xs font-semibold text-brand">Copy</button>
-                          </div>
-                          <p className="mt-2 text-sm text-slate-600">Weka kiasi cha <strong>{formatPrice(total, currency)}</strong>, kisha thibitisha kwa PIN yako.</p>
-                          <p className="mt-2 rounded-md bg-white px-3 py-2 text-xs text-slate-600">Jina la biashara: <strong>{BUSINESS_NAME}</strong></p>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-
-            {status && (
-              <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
-                {status}
-              </div>
-            )}
-
-            <Button
-              onClick={handlePayNow}
-              disabled={!method || isProcessing}
-              size="lg"
-              className="mt-6 h-12 w-full bg-brand text-brand-foreground hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isProcessing ? "Inatuma Push..." : <>Pay Now <Check className="ml-2 h-4 w-4" /></>}
-            </Button>
-            <p className="mt-3 text-center text-xs text-slate-400">All transactions are secure and encrypted.</p>
-          </section>
+          <aside className="h-fit rounded-2xl border bg-white p-5 shadow-card sm:p-7 lg:sticky lg:top-24">
+            <h2 className="font-display text-xl font-bold">Muhtasari wa oda</h2>
+            <div className="mt-5 space-y-4">{items.map(item => <div key={item.variantId} className="flex gap-3"><div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-100">{item.product.node.images?.edges?.[0]?.node && <img src={item.product.node.images.edges[0].node.url} alt={item.product.node.title} className="h-full w-full object-cover"/>}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.product.node.title}</p><p className="text-xs text-muted-foreground">{item.quantity} × {formatPrice(item.price.amount, currency)}</p></div><p className="text-sm font-semibold">{formatPrice(Number(item.price.amount) * item.quantity, currency)}</p></div>)}</div>
+            <div className="mt-6 space-y-3 border-t pt-5 text-sm"><div className="flex justify-between"><span>Bidhaa</span><strong>{formatPrice(subtotal, currency)}</strong></div><div className="flex justify-between"><span>Delivery</span><strong>{distance ? formatPrice(deliveryFee, currency) : "—"}</strong></div><div className="flex justify-between border-t pt-3 text-lg"><span>Jumla</span><strong>{formatPrice(total, currency)}</strong></div></div>
+            <p className="mt-4 text-xs text-muted-foreground">Button ya malipo itawaka baada ya taarifa zote za delivery na distance kukamilika.</p>
+          </aside>
         </div>
       </div>
     </div>
-  );
-}
-
-function PaymentChoice({
-  selected,
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  selected: boolean;
-  icon: ReactNode;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition ${selected ? "border-brand bg-blue-50/50" : "border-slate-200 bg-white hover:border-slate-300"}`}
-    >
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-brand text-white" : "bg-slate-100 text-slate-600"}`}>
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold text-slate-900">{title}</span>
-        <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
-      </span>
-      <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selected ? "border-brand bg-brand" : "border-slate-300"}`}>
-        {selected && <Check className="h-3 w-3 text-white" />}
-      </span>
-    </button>
   );
 }
