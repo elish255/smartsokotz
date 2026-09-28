@@ -1,7 +1,6 @@
 export type Region = { name: string; districts: string[]; minimumFee: number; districtMinimums?: Record<string, number> };
 
-// Dar es Salaam is deliberately first. Delivery uses offline district/region estimates from Kariakoo.
-// Rate is TZS 2,000 per estimated kilometre.
+// Dar es Salaam is deliberately first. Delivery uses configured district estimates and minimums.
 export const TANZANIA_REGIONS: Region[] = [
   { name: "Dar es Salaam", minimumFee: 5000, districtMinimums: { Ilala: 5000, Kinondoni: 7000, Temeke: 10000, Ubungo: 7000, Kigamboni: 12000 }, districts: ["Ilala", "Kinondoni", "Temeke", "Ubungo", "Kigamboni"] },
   { name: "Arusha", minimumFee: 15000, districts: ["Arusha City", "Arumeru", "Karatu", "Longido", "Monduli", "Ngorongoro"] },

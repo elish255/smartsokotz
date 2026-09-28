@@ -68,7 +68,7 @@ function CheckoutPage() {
       const response = await fetch("/api/delivery-distance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fullName, region, district, place, minimumFee: selectedRegion?.minimumFee || 0 }) });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || "Imeshindikana kupata distance.");
-      setDistance(data); setMessage(`Umbali: ${data.distanceKm.toFixed(1)} km. Gharama ya delivery: ${formatPrice(data.deliveryFee, currency)}.`);
+      setDistance(data); setMessage(`Gharama ya delivery: ${formatPrice(data.deliveryFee, currency)}.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Imeshindikana kupata bei ya delivery."); }
     finally { setDistanceLoading(false); }
   };
@@ -80,12 +80,12 @@ function CheckoutPage() {
     setPaymentLoading(true); setMessage(null);
     try {
       const orderItems = items.map(item => ({ productId: item.product.node.id, title: item.product.node.title, variantId: item.variantId, quantity: item.quantity, unitPrice: Number(item.price.amount), lineTotal: Number(item.price.amount) * item.quantity, imageUrl: item.product.node.images?.edges?.[0]?.node?.url || null }));
-      const response = await fetch("/api/fimipay", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: "create", amount: total, subtotal, deliveryFee, distanceKm: distance.distanceKm, deliveryFullName: fullName.trim(), region, district, place: place.trim(), phone: phone.trim(), items: orderItems }) });
+      const response = await fetch("/api/payment", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: "create", amount: total, subtotal, deliveryFee, distanceKm: distance.distanceKm, deliveryFullName: fullName.trim(), region, district, place: place.trim(), phone: phone.trim(), items: orderItems }) });
       const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.error || "FimiPay imeshindwa kuanzisha malipo.");
+      if (!response.ok || !data.ok) throw new Error(data.error || "Imeshindikana kuanzisha malipo.");
       setPaymentOrderId(data.orderId); setMessage("Push imetumwa. Thibitisha malipo kwenye simu yako. Mfumo utaangalia status moja kwa moja.");
       void pollPayment(data.orderId);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Imeshindikana kutuma Push."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Imeshindikana kuanzisha malipo."); }
     finally { setPaymentLoading(false); }
   };
 
@@ -94,7 +94,7 @@ function CheckoutPage() {
     for (let attempt = 0; attempt < 20; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 3000));
       try {
-        const response = await fetch("/api/fimipay", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: "status", orderId }) });
+        const response = await fetch("/api/payment", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ action: "status", orderId }) });
         const data = await response.json();
         if (data.paid) { setPaid(true); setMessage("Malipo yamepokelewa. Oda yako imekamilika."); toast.success("Malipo yamefanikiwa"); clearCart(); return; }
         if (data.order?.payment_status === "failed") { setMessage("Malipo hayajakamilika. Unaweza kujaribu tena."); return; }
@@ -125,14 +125,14 @@ function CheckoutPage() {
             <Button onClick={calculateDistance} disabled={distanceLoading} className="mt-5 w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800">{distanceLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Inapima distance...</> : "Hesabu Delivery"}</Button>
             {distance && <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Umbali</span><p className="font-bold">{distance.distanceKm.toFixed(1)} km</p></div><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Gharama ya delivery</span><p className="font-bold">{formatPrice(distance.deliveryFee, currency)}</p></div></div>}
             {message && <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}
-            <div className="mt-7 border-t pt-6"><h2 className="font-display text-lg font-bold">Malipo kwa FimiPay Push</h2><p className="mt-1 text-sm text-muted-foreground">Push itatumwa kwenye namba uliyoweka hapo juu.</p><Button onClick={payWithPush} disabled={!distance || paymentLoading || Boolean(paymentOrderId)} size="lg" className="mt-4 h-12 w-full bg-brand text-brand-foreground hover:bg-brand/90"><Smartphone className="mr-2 h-5 w-5"/>{paymentLoading ? "Inatuma Push..." : paymentOrderId ? "Push imetumwa" : "Lipa kwa Push"}</Button></div>
+            <div className="mt-7 border-t pt-6"><h2 className="font-display text-lg font-bold">Malipo</h2><p className="mt-1 text-sm text-muted-foreground">Thibitisha malipo kwenye simu yako baada ya kubonyeza kitufe hapa chini.</p><Button onClick={payWithPush} disabled={!distance || paymentLoading || Boolean(paymentOrderId)} size="lg" className="mt-4 h-12 w-full bg-brand text-brand-foreground hover:bg-brand/90"><Smartphone className="mr-2 h-5 w-5"/>{paymentLoading ? "Inatuma..." : paymentOrderId ? "Malipo yametumwa" : "Lipa sasa"}</Button></div>
           </section>
 
           <aside className="h-fit rounded-2xl border bg-white p-5 shadow-card sm:p-7 lg:sticky lg:top-24">
             <h2 className="font-display text-xl font-bold">Muhtasari wa oda</h2>
             <div className="mt-5 space-y-4">{items.map(item => <div key={item.variantId} className="flex gap-3"><div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-100">{item.product.node.images?.edges?.[0]?.node && <img src={item.product.node.images.edges[0].node.url} alt={item.product.node.title} className="h-full w-full object-cover"/>}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.product.node.title}</p><p className="text-xs text-muted-foreground">{item.quantity} × {formatPrice(item.price.amount, currency)}</p></div><p className="text-sm font-semibold">{formatPrice(Number(item.price.amount) * item.quantity, currency)}</p></div>)}</div>
             <div className="mt-6 space-y-3 border-t pt-5 text-sm"><div className="flex justify-between"><span>Bidhaa</span><strong>{formatPrice(subtotal, currency)}</strong></div><div className="flex justify-between"><span>Delivery</span><strong>{distance ? formatPrice(deliveryFee, currency) : "—"}</strong></div><div className="flex justify-between border-t pt-3 text-lg"><span>Jumla</span><strong>{formatPrice(total, currency)}</strong></div></div>
-            
+            <p className="mt-4 text-xs text-muted-foreground">Button ya malipo itawaka baada ya taarifa zote za delivery na distance kukamilika.</p>
           </aside>
         </div>
       </div>

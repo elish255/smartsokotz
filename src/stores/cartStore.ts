@@ -318,7 +318,7 @@ export const useCartStore = create<CartStore>()(
           const cart = data?.data?.cart;
           if (!cart || cart.totalQuantity === 0) {
             // Keep the local cart so a returning customer never loses selected products.
-            // The SMART SOKO checkout uses the persisted local items for the FimiPay order.
+            // The SMART SOKO checkout uses the persisted local items for the payment order.
             set({ cartId: null, checkoutUrl: null });
           }
         } catch (error) {

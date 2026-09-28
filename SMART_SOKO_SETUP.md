@@ -1,4 +1,4 @@
-# SMART SOKO — Account, Delivery & FimiPay setup
+# SMART SOKO — Account, Delivery & Payment setup
 
 ## 1. Supabase
 Run `supabase/SMART_SOKO_SHARED.sql` once in the Supabase project you want SMART SOKO to use.
@@ -21,29 +21,29 @@ Server-only:
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY` OR `SUPABASE_SERVICE_ROLE_KEY`
-- `FIMIPAY_API_KEY`
-- `FIMIPAY_CURRENCY=TZS`
-- `FIMIPAY_CREATE_PAYMENT_URL=https://fimipay.com/api/v1/payment/create_order`
-- `FIMIPAY_ORDER_STATUS_URL=https://fimipay.com/api/v1/payment/order_status`
+- `FIMIPAY_API_KEY` (server-side payment provider key)
+- `FIMIPAY_CURRENCY=TZS` (server-side)
+- `FIMIPAY_CREATE_PAYMENT_URL=https://fimipay.com/api/v1/payment/create_order` (server-side)
+- `FIMIPAY_ORDER_STATUS_URL=https://fimipay.com/api/v1/payment/order_status` (server-side)
+
 
 Do not prefix secret keys with `VITE_`.
 
 ## 3. Delivery
-Delivery is calculated offline from Kariakoo using predefined delivery zones.
+Delivery origin is Kariakoo Market, Dar es Salaam.
 
-No Google Maps API key or Google Cloud billing is required.
+Delivery uses configured district distance estimates and does not require an external maps API.
+Rate: `TZS 2,000 / km`, rounded up to the next whole kilometre.
+For Dar es Salaam, minimum delivery fees are:
+- Ilala: 5,000
+- Kinondoni: 7,000
+- Temeke: 10,000
+- Ubungo: 7,000
+- Kigamboni: 12,000
 
-Rate: `TZS 2,000 / estimated km`.
-Dar es Salaam district estimates:
-- Ilala: 3 km
-- Kinondoni: 8 km
-- Temeke: 10 km
-- Ubungo: 12 km
-- Kigamboni: 15 km
+For other regions, the region minimum in `src/data/tanzania.ts` is used. The distance calculation can still produce a higher amount.
 
-Other regions use a predefined regional delivery distance. The value is an estimate for pricing, not live road distance.
-
-The Pay button remains disabled until the delivery details are complete and the offline delivery calculation succeeds.
+The Pay button remains disabled until the delivery details are complete and the delivery estimate is calculated.
 
 ## 4. Cart + registration
 The cart is persisted in browser localStorage. If a visitor presses `Weka kikapuni` while not logged in:
@@ -52,9 +52,9 @@ The cart is persisted in browser localStorage. If a visitor presses `Weka kikapu
 3. after login, the pending product is automatically added to the cart;
 4. leaving and returning to the site keeps the local cart.
 
-## 5. FimiPay
-FimiPay is used only for the checkout payment push. The request contains the final product subtotal + delivery fee.
-Payment status is checked through the FimiPay order-status endpoint.
+## 5. Payment
+The checkout payment service is used only for the payment push. The request contains the final product subtotal + delivery fee.
+Payment status is checked through the provider order-status endpoint.
 
 ## Registration error repair
 
