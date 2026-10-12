@@ -186,59 +186,17 @@ export const useCartStore = create<CartStore>()(
       isLoading: false,
       isSyncing: false,
 
+      // SMART SOKO uses its own checkout, so every product is stored locally.
+      // This supports imported products and Shopify products without requiring a Shopify cart.
       addItem: async (item) => {
-        const { items, cartId, clearCart } = get();
-        if (item.variantId.startsWith("shopflix:")) {
-          const existingLocal = items.find((i) => i.variantId === item.variantId);
-          set({
-            items: existingLocal
-              ? items.map((i) => i.variantId === item.variantId ? { ...i, quantity: i.quantity + item.quantity } : i)
-              : [...items, { ...item, lineId: null }],
-          });
-          return;
-        }
-        const existingItem = items.find((i) => i.variantId === item.variantId);
-
-        set({ isLoading: true });
-        try {
-          if (!cartId) {
-            const result = await createShopifyCart({ ...item, lineId: null });
-            if (result) {
-              const currentItems = get().items;
-              set({
-                cartId: result.cartId,
-                checkoutUrl: result.checkoutUrl,
-                items: [...currentItems, { ...item, lineId: result.lineId }],
-              });
-            }
-          } else if (existingItem) {
-            const newQuantity = existingItem.quantity + item.quantity;
-            if (!existingItem.lineId) return;
-            const result = await updateShopifyCartLine(cartId, existingItem.lineId, newQuantity);
-            if (result.success) {
-              const currentItems = get().items;
-              set({
-                items: currentItems.map((i) =>
-                  i.variantId === item.variantId ? { ...i, quantity: newQuantity } : i,
-                ),
-              });
-            } else if (result.cartNotFound) {
-              set({ cartId: null, checkoutUrl: null });
-            }
-          } else {
-            const result = await addLineToShopifyCart(cartId, { ...item, lineId: null });
-            if (result.success) {
-              const currentItems = get().items;
-              set({ items: [...currentItems, { ...item, lineId: result.lineId ?? null }] });
-            } else if (result.cartNotFound) {
-              set({ cartId: null, checkoutUrl: null });
-            }
-          }
-        } catch (error) {
-          console.error("Failed to add item:", error);
-        } finally {
-          set({ isLoading: false });
-        }
+        const existing = get().items.find((i) => i.variantId === item.variantId);
+        set({
+          items: existing
+            ? get().items.map((i) => i.variantId === item.variantId
+                ? { ...i, quantity: i.quantity + item.quantity }
+                : i)
+            : [...get().items, { ...item, lineId: null }],
+        });
       },
 
       updateQuantity: async (variantId, quantity) => {
@@ -246,86 +204,20 @@ export const useCartStore = create<CartStore>()(
           await get().removeItem(variantId);
           return;
         }
-
-        const { items, cartId, clearCart } = get();
-        const item = items.find((i) => i.variantId === variantId);
-        if (item?.variantId.startsWith("shopflix:")) {
-          set({ items: items.map((i) => i.variantId === variantId ? { ...i, quantity } : i) });
-          return;
-        }
-        if (!item?.lineId || !cartId) return;
-
-        set({ isLoading: true });
-        try {
-          const result = await updateShopifyCartLine(cartId, item.lineId, quantity);
-          if (result.success) {
-            const currentItems = get().items;
-            set({
-              items: currentItems.map((i) => (i.variantId === variantId ? { ...i, quantity } : i)),
-            });
-          } else if (result.cartNotFound) {
-            set({ cartId: null, checkoutUrl: null });
-          }
-        } catch (error) {
-          console.error("Failed to update quantity:", error);
-        } finally {
-          set({ isLoading: false });
-        }
+        set({ items: get().items.map((item) => item.variantId === variantId ? { ...item, quantity } : item) });
       },
 
       removeItem: async (variantId) => {
-        const { items, cartId, clearCart } = get();
-        const item = items.find((i) => i.variantId === variantId);
-        if (item?.variantId.startsWith("shopflix:")) {
-          const newItems = items.filter((i) => i.variantId !== variantId);
-          set({ items: newItems });
-          return;
-        }
-        if (!item?.lineId || !cartId) return;
-
-        set({ isLoading: true });
-        try {
-          const result = await removeLineFromShopifyCart(cartId, item.lineId);
-          if (result.success) {
-            const currentItems = get().items;
-            const newItems = currentItems.filter((i) => i.variantId !== variantId);
-            if (newItems.length === 0) {
-              clearCart();
-            } else {
-              set({ items: newItems });
-            }
-          } else if (result.cartNotFound) {
-            set({ cartId: null, checkoutUrl: null });
-          }
-        } catch (error) {
-          console.error("Failed to remove item:", error);
-        } finally {
-          set({ isLoading: false });
-        }
+        const remaining = get().items.filter((item) => item.variantId !== variantId);
+        if (remaining.length === 0) get().clearCart();
+        else set({ items: remaining });
       },
 
       clearCart: () => set({ items: [], cartId: null, checkoutUrl: null }),
       getCheckoutUrl: () => get().checkoutUrl,
 
       syncCart: async () => {
-        const { cartId, isSyncing, clearCart } = get();
-        if (!cartId || isSyncing) return;
-
-        set({ isSyncing: true });
-        try {
-          const data = await storefrontApiRequest(CART_QUERY, { id: cartId });
-          if (!data) return;
-          const cart = data?.data?.cart;
-          if (!cart || cart.totalQuantity === 0) {
-            // Keep the local cart so a returning customer never loses selected products.
-            // The SMART SOKO checkout uses the persisted local items for the payment order.
-            set({ cartId: null, checkoutUrl: null });
-          }
-        } catch (error) {
-          console.error("Failed to sync cart with Shopify:", error);
-        } finally {
-          set({ isSyncing: false });
-        }
+        // The local persisted cart is the source of truth for SMART SOKO checkout.
       },
     }),
     {

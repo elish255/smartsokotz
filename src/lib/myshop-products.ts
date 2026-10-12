@@ -12,7 +12,7 @@ export function getMyshopProducts(): ShopifyProduct[] {
         description: item.description,
         handle: `myshop-${item.handle}`,
         productType: item.category,
-        vendor: item.vendor,
+        vendor: "SMART SOKO",
         tags: ["myshop", "smart-soko"],
         priceRange: { minVariantPrice: { amount, currencyCode: item.currency } },
         images: { edges: item.image ? [{ node: { url: item.image, altText: item.title } }] : [] },
@@ -31,4 +31,9 @@ export function getMyshopProducts(): ShopifyProduct[] {
       },
     } satisfies ShopifyProduct;
   });
+}
+
+
+export function getMyshopProductByHandle(handle: string): ShopifyProduct | null {
+  return getMyshopProducts().find((product) => product.node.handle === handle) ?? null;
 }

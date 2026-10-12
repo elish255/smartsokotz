@@ -212,10 +212,10 @@ export function getShopflixProducts(): ShopifyProduct[] {
       node: {
         id: variantId,
         title: item.title,
-        description: `Bidhaa ya Mobile Phone Accessories iliyoingizwa kwenye katalogi ya SMART SOKO kutoka Shopflix.`,
+        description: `Bidhaa ya vifaa vya simu inayopatikana SMART SOKO.`,
         handle,
         productType: "Mobile Phone Accessories",
-        vendor: "Shopflix Catalog",
+        vendor: "SMART SOKO",
         tags: ["shopflix", "mobile-phone-accessories"],
         priceRange: { minVariantPrice: { amount, currencyCode: item.currency || "TZS" } },
         images: { edges: [{ node: { url: "/hero-electronics.jpg", altText: item.title } }] },

@@ -5,9 +5,6 @@ import { ArrowLeft, Loader2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
-import { useAuth } from "@/hooks/useAuth";
-import { getStoredSession } from "@/lib/supabase";
-import { savePendingCartItem } from "@/lib/pendingCart";
 import { fetchProductByHandle, formatPrice } from "@/lib/shopify";
 import { getShopflixProductByHandle } from "@/lib/shopflix";
 import { getMyshopProducts } from "@/lib/myshop-products";
@@ -50,7 +47,6 @@ function ProductPage() {
   });
   const addItem = useCartStore((state) => state.addItem);
   const isAdding = useCartStore((state) => state.isLoading);
-  const { user } = useAuth();
   const [variantId, setVariantId] = useState<string | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
 
@@ -89,11 +85,6 @@ function ProductPage() {
       quantity: 1,
       selectedOptions: selected.selectedOptions || [],
     };
-    if (!user && !getStoredSession()) {
-      savePendingCartItem(pendingItem);
-      window.location.href = "/register";
-      return;
-    }
     await addItem(pendingItem);
     toast.success("Imeongezwa kikapuni", { description: node.title });
   };
@@ -164,7 +155,7 @@ function ProductPage() {
                   <button
                     key={variant.id}
                     onClick={() => setVariantId(variant.id)}
-                    disabled={!variant.availableForSale}
+                    
                     className={`rounded-md border px-3 py-1.5 text-sm transition-colors disabled:opacity-40 ${
                       selected?.id === variant.id
                         ? "border-brand bg-brand/10 text-brand"
@@ -180,7 +171,7 @@ function ProductPage() {
 
           <Button
             onClick={handleAddToCart}
-            disabled={isAdding || !selected?.availableForSale}
+            disabled={isAdding || !selected}
             size="lg"
             className="mt-8 w-full bg-brand text-brand-foreground hover:bg-brand/90 sm:w-auto"
           >
@@ -189,7 +180,7 @@ function ProductPage() {
             ) : (
               <>
                 <ShoppingCart className="mr-2 h-4 w-4" />
-                {selected?.availableForSale ? "Weka kikapuni" : "Imeisha"}
+                Weka kikapuni
               </>
             )}
           </Button>

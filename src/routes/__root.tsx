@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import React, { useEffect, type ReactNode } from "react";
+import { MessageCircle } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -173,6 +174,16 @@ function AppShell() {
       <SiteFooter />
       <div className="h-16 md:hidden" />
       <MobileTabBar />
+      <a
+        href="https://wa.me/255615180597?text=Habari%20Smart%20Soko%2C%20naomba%20msaada."
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Pata msaada kupitia WhatsApp"
+        title="Pata msaada WhatsApp"
+        className="fixed bottom-20 right-4 z-[80] flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl transition hover:scale-105 hover:bg-emerald-700 md:bottom-6 md:right-6"
+      >
+        <MessageCircle className="h-7 w-7" />
+      </a>
       <Toaster position="top-center" richColors />
     </div>
   );

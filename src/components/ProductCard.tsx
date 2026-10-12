@@ -3,15 +3,11 @@ import { ChevronRight, Loader2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
-import { useAuth } from "@/hooks/useAuth";
-import { getStoredSession } from "@/lib/supabase";
-import { savePendingCartItem } from "@/lib/pendingCart";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 
 export function ProductCard({ product }: { product: ShopifyProduct }) {
   const addItem = useCartStore((state) => state.addItem);
   const isLoading = useCartStore((state) => state.isLoading);
-  const { user } = useAuth();
   const node = product.node;
   const variant = node.variants.edges.find((v) => v.node.availableForSale)?.node
     ?? node.variants.edges[0]?.node;
@@ -27,11 +23,6 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
       quantity: 1,
       selectedOptions: variant.selectedOptions || [],
     };
-    if (!user && !getStoredSession()) {
-      savePendingCartItem(pendingItem);
-      window.location.href = "/register";
-      return;
-    }
     await addItem(pendingItem);
     toast.success("Imeongezwa kikapuni", { description: node.title });
   };
@@ -57,9 +48,7 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
         )}
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        {node.vendor ? (
-          <p className="text-[11px] font-bold tracking-wide text-brand uppercase">{node.vendor}</p>
-        ) : null}
+        <p className="text-[11px] font-bold tracking-wide text-brand uppercase">SMART SOKO</p>
         <Link to="/product/$handle" params={{ handle: node.handle }}>
           <h3 className="line-clamp-1 font-display text-sm font-semibold">{node.title}</h3>
         </Link>
@@ -72,7 +61,7 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
         <div className="mt-2 flex items-center gap-2">
           <Button
             onClick={handleAddToCart}
-            disabled={isLoading || !variant || !variant.availableForSale}
+            disabled={isLoading || !variant}
             variant="secondary"
             size="icon"
             aria-label="Weka kikapuni"
