@@ -32,11 +32,14 @@ function CheckoutPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
-  const [paid, setPaid] = useState(false);\n  const [refundAccepted, setRefundAccepted] = useState(false);\n  const [refundOpen, setRefundOpen] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const [refundAccepted, setRefundAccepted] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
 
   const selectedRegion = getRegion(region);
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.price.amount) * item.quantity, 0), [items]);
-  const needsDelivery = subtotal >= 1_000_000;\n  const deliveryFee = needsDelivery ? (distance?.deliveryFee ?? 0) : 0;
+  const needsDelivery = subtotal >= 1_000_000;
+  const deliveryFee = needsDelivery ? (distance?.deliveryFee ?? 0) : 0;
   const total = subtotal + deliveryFee;
   const currency = items[0]?.price.currencyCode ?? "TZS";
 
@@ -75,7 +78,8 @@ function CheckoutPage() {
 
   const payWithPush = async () => {
     if (!session?.access_token) { navigate({ to: "/login" }); return; }
-    if (!refundAccepted) { setMessage("Tafadhali weka tiki kwenye Refund Policy kabla ya kuendelea."); return; }\n    if (needsDelivery && !distance) { setMessage("Kwanza kamilisha taarifa za delivery na bonyeza Hesabu Delivery."); return; }
+    if (!refundAccepted) { setMessage("Tafadhali weka tiki kwenye Refund Policy kabla ya kuendelea."); return; }
+    if (needsDelivery && !distance) { setMessage("Kwanza kamilisha taarifa za delivery na bonyeza Hesabu Delivery."); return; }
     if (!items.length) return;
     setPaymentLoading(true); setMessage(null);
     try {

@@ -22,7 +22,8 @@ export const Route = createFileRoute("/mawasiliano")({
 
 const channels = [
   { icon: Mail, label: "Barua pepe", value: "SmartSokotz@gmail.com", href: "mailto:SmartSokotz@gmail.com" },
-  { icon: Phone, label: "WhatsApp / Simu", value: "255615180597", href: "https://wa.me/255615180597" },\n  { icon: MapPin, label: "Eneo", value: "Dar es Salaam, Tanzania", href: null },
+  { icon: Phone, label: "WhatsApp / Simu", value: "255615180597", href: "https://wa.me/255615180597" },
+  { icon: MapPin, label: "Eneo", value: "Dar es Salaam, Tanzania", href: null },
 ];
 
 function ContactPage() {
