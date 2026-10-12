@@ -10,6 +10,7 @@ import { getStoredSession } from "@/lib/supabase";
 import { savePendingCartItem } from "@/lib/pendingCart";
 import { fetchProductByHandle, formatPrice } from "@/lib/shopify";
 import { getShopflixProductByHandle } from "@/lib/shopflix";
+import { getMyshopProductByHandle } from "@/lib/myshop-products";
 
 export const Route = createFileRoute("/product/$handle")({
   head: ({ params }) => ({
@@ -34,7 +35,18 @@ function ProductPage() {
   const { handle } = Route.useParams();
   const { data, isLoading } = useQuery({
     queryKey: ["product", handle],
-    queryFn: async () => (await fetchProductByHandle(handle)) ?? getShopflixProductByHandle(handle),
+    queryFn: async () => {
+      const localProduct = getMyshopProductByHandle(handle) ?? getShopflixProductByHandle(handle);
+      if (localProduct) return localProduct;
+
+      // Remote product lookup is optional; a Shopify outage should not crash local products.
+      try {
+        return (await fetchProductByHandle(handle)) ?? null;
+      } catch (error) {
+        console.warn("Unable to load remote Shopify product.", error);
+        return null;
+      }
+    },
   });
   const addItem = useCartStore((state) => state.addItem);
   const isAdding = useCartStore((state) => state.isLoading);

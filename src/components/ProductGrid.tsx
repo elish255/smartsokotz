@@ -9,14 +9,31 @@ export function useProducts(search?: string) {
   return useQuery({
     queryKey: ["products", search ?? ""],
     queryFn: async () => {
-      const [shopifyProducts, shopflixProducts] = await Promise.all([
-        fetchProducts(50, search || undefined),
-        Promise.resolve(getShopflixProducts()),
-      ]);
-      const local = search
-        ? shopflixProducts.filter((p) => `${p.node.title} ${p.node.vendor ?? ""} ${p.node.productType ?? ""}`.toLowerCase().includes(search.toLowerCase()))
-        : shopflixProducts;
-      return [...shopifyProducts, ...local];
+      // The imported MyShop and Shopflix catalogs are local and do not depend on
+      // Shopify, network access, or API credentials to render names, images, and prices.
+      const localProducts = [...getMyshopProducts(), ...getShopflixProducts()];
+      let shopifyProducts: Awaited<ReturnType<typeof fetchProducts>> = [];
+
+      // Shopify is optional. A failed/unconfigured Storefront API must not hide
+      // products already bundled with the site.
+      try {
+        shopifyProducts = await fetchProducts(50, search || undefined);
+      } catch (error) {
+        console.warn("Shopify products unavailable; showing local catalog instead.", error);
+      }
+
+      const combined = [...shopifyProducts, ...localProducts];
+      const unique = Array.from(
+        new Map(combined.map((product) => [product.node.id, product])).values(),
+      );
+      const q = search?.trim().toLowerCase();
+      if (!q) return unique;
+
+      return unique.filter((product) =>
+        `${product.node.title} ${product.node.vendor ?? ""} ${product.node.productType ?? ""}`
+          .toLowerCase()
+          .includes(q),
+      );
     },
   });
 }
