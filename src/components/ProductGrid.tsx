@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { fetchProducts } from "@/lib/shopify";
-import { getShopflixProducts } from "@/lib/shopflix";\nimport { getMyshopProducts } from "@/lib/myshop-products";
+import { getShopflixProducts } from "@/lib/shopflix";
+import { getMyshopProducts } from "@/lib/myshop-products";
 
 export function useProducts(search?: string) {
   return useQuery({
