@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, MapPin } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 
 export const Route = createFileRoute("/mawasiliano")({
   head: () => ({
@@ -21,8 +21,8 @@ export const Route = createFileRoute("/mawasiliano")({
 });
 
 const channels = [
-  { icon: Mail, label: "Barua pepe", value: "info@smartsoko.co.tz", href: "mailto:info@smartsoko.co.tz" },
-  { icon: MapPin, label: "Eneo", value: "Dar es Salaam, Tanzania", href: null },
+  { icon: Mail, label: "Barua pepe", value: "SmartSokotz@gmail.com", href: "mailto:SmartSokotz@gmail.com" },
+  { icon: Phone, label: "WhatsApp / Simu", value: "255615180597", href: "https://wa.me/255615180597" },\n  { icon: MapPin, label: "Eneo", value: "Dar es Salaam, Tanzania", href: null },
 ];
 
 function ContactPage() {

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Mail, MapPin } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import logo from "@/assets/smart-soko-logo.png";
 
 export function SiteFooter() {
@@ -34,7 +34,10 @@ export function SiteFooter() {
           <h3 className="font-display text-sm font-semibold tracking-wide uppercase">Wasiliana nasi</h3>
           <ul className="mt-3 space-y-2 text-sm text-surface-foreground/70">
             <li className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-accent" /> info@smartsoko.co.tz
+              <Mail className="h-4 w-4 text-accent" /> SmartSokotz@gmail.com
+            </li>
+            <li className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-accent" /> <a href="https://wa.me/255615180597" target="_blank" rel="noreferrer" className="hover:text-accent">WhatsApp: 255615180597</a>
             </li>
             <li className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-accent" /> Dar es Salaam, Tanzania

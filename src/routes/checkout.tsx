@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Loader2, MapPin, Smartphone, UserRound } from "lucide-react";
+import { Check, ChevronDown, Loader2, MapPin, Smartphone, UserRound, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,11 +32,11 @@ function CheckoutPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
-  const [paid, setPaid] = useState(false);
+  const [paid, setPaid] = useState(false);\n  const [refundAccepted, setRefundAccepted] = useState(false);\n  const [refundOpen, setRefundOpen] = useState(false);
 
   const selectedRegion = getRegion(region);
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.price.amount) * item.quantity, 0), [items]);
-  const deliveryFee = distance?.deliveryFee ?? 0;
+  const needsDelivery = subtotal >= 1_000_000;\n  const deliveryFee = needsDelivery ? (distance?.deliveryFee ?? 0) : 0;
   const total = subtotal + deliveryFee;
   const currency = items[0]?.price.currencyCode ?? "TZS";
 
@@ -75,7 +75,7 @@ function CheckoutPage() {
 
   const payWithPush = async () => {
     if (!session?.access_token) { navigate({ to: "/login" }); return; }
-    if (!distance) { setMessage("Kwanza kamilisha taarifa za delivery na bonyeza Hesabu Delivery."); return; }
+    if (!refundAccepted) { setMessage("Tafadhali weka tiki kwenye Refund Policy kabla ya kuendelea."); return; }\n    if (needsDelivery && !distance) { setMessage("Kwanza kamilisha taarifa za delivery na bonyeza Hesabu Delivery."); return; }
     if (!items.length) return;
     setPaymentLoading(true); setMessage(null);
     try {
@@ -113,29 +113,45 @@ function CheckoutPage() {
         <Link to="/" className="text-sm font-medium text-brand">← Endelea kununua</Link>
         <div className="mt-5 grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
           <section className="rounded-2xl border bg-white p-5 shadow-card sm:p-7">
-            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white"><MapPin className="h-5 w-5" /></span><div><h1 className="font-display text-2xl font-bold">Taarifa za delivery</h1><p className="text-sm text-muted-foreground">Lazima ujaze taarifa hizi kabla ya malipo kuwashwa.</p></div></div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2"><Label>Majina kamili</Label><Input value={fullName} onChange={e => { setFullName(e.target.value); setDistance(null); }} placeholder="Jina kamili la mpokeaji" className="mt-1" /></div>
-              <div><Label>Namba ya simu</Label><Input value={phone} onChange={e => { setPhone(e.target.value); setDistance(null); }} placeholder="0712345678" className="mt-1" /></div>
-              <div><Label>Mkoa</Label><select value={region} onChange={e => setRegion(e.target.value)} className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm">{TANZANIA_REGIONS.map(r => <option key={r.name}>{r.name}</option>)}</select></div>
-              <div><Label>Wilaya</Label><div className="relative mt-1"><select value={district} onChange={e => { setDistrict(e.target.value); setDistance(null); }} className="h-10 w-full appearance-none rounded-md border bg-background px-3 pr-9 text-sm"><option value="">Chagua wilaya</option>{selectedRegion?.districts.map(d => <option key={d}>{d}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-muted-foreground"/></div></div>
-              <div><Label>Mahali anapopokea</Label><Input value={place} onChange={e => { setPlace(e.target.value); setDistance(null); }} placeholder="Mfano: Mtaa, nyumba, eneo" className="mt-1" /></div>
+            {needsDelivery && <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white"><MapPin className="h-5 w-5" /></span><div><h1 className="font-display text-2xl font-bold">Taarifa za delivery</h1><p className="text-sm text-muted-foreground">Jaza taarifa za mahali pa kufikishiwa bidhaa.</p></div></div>}
+            <div className="mt-6 space-y-4">
+              <div className="rounded-xl border border-border bg-slate-50 p-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input type="checkbox" checked={refundAccepted} onChange={e => setRefundAccepted(e.target.checked)} className="mt-1 h-4 w-4 accent-emerald-600" />
+                  <span className="text-sm"><span className="font-semibold">Nimesoma na kukubali </span><button type="button" onClick={() => setRefundOpen(true)} className="font-semibold text-brand underline underline-offset-2">Refund Policy</button></span>
+                </label>
+              </div>
+              <div><Label>Namba ya simu ya malipo</Label><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="0712345678" className="mt-1" /></div>
+              {needsDelivery && <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2"><Label>Majina kamili</Label><Input value={fullName} onChange={e => { setFullName(e.target.value); setDistance(null); }} placeholder="Jina kamili la mpokeaji" className="mt-1" /></div>
+                <div><Label>Mkoa</Label><select value={region} onChange={e => setRegion(e.target.value)} className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm">{TANZANIA_REGIONS.map(r => <option key={r.name}>{r.name}</option>)}</select></div>
+                <div><Label>Wilaya</Label><div className="relative mt-1"><select value={district} onChange={e => { setDistrict(e.target.value); setDistance(null); }} className="h-10 w-full appearance-none rounded-md border bg-background px-3 pr-9 text-sm"><option value="">Chagua wilaya</option>{selectedRegion?.districts.map(d => <option key={d}>{d}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-muted-foreground"/></div></div>
+                <div className="sm:col-span-2"><Label>Mahali anapopokea</Label><Input value={place} onChange={e => { setPlace(e.target.value); setDistance(null); }} placeholder="Mfano: Mtaa, nyumba, eneo" className="mt-1" /></div>
+              </div>}
             </div>
-            
-            <Button onClick={calculateDistance} disabled={distanceLoading} className="mt-5 w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800">{distanceLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Inapima distance...</> : "Hesabu Delivery"}</Button>
-            {distance && <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Umbali</span><p className="font-bold">{distance.distanceKm.toFixed(1)} km</p></div><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Gharama ya delivery</span><p className="font-bold">{formatPrice(distance.deliveryFee, currency)}</p></div></div>}
+            {needsDelivery && <Button onClick={calculateDistance} disabled={distanceLoading} className="mt-5 w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800">{distanceLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Inapima distance...</> : "Hesabu Delivery"}</Button>}
+
+            {needsDelivery && distance && <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Umbali</span><p className="font-bold">{distance.distanceKm.toFixed(1)} km</p></div><div className="rounded-xl bg-slate-50 p-3"><span className="text-xs text-muted-foreground">Gharama ya delivery</span><p className="font-bold">{formatPrice(distance.deliveryFee, currency)}</p></div></div>}
             {message && <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">{message}</div>}
-            <div className="mt-7 border-t pt-6"><h2 className="font-display text-lg font-bold">Malipo</h2><p className="mt-1 text-sm text-muted-foreground">Thibitisha malipo kwenye simu yako baada ya kubonyeza kitufe hapa chini.</p><Button onClick={payWithPush} disabled={!distance || paymentLoading || Boolean(paymentOrderId)} size="lg" className="mt-4 h-12 w-full bg-brand text-brand-foreground hover:bg-brand/90"><Smartphone className="mr-2 h-5 w-5"/>{paymentLoading ? "Inatuma..." : paymentOrderId ? "Malipo yametumwa" : "Lipa sasa"}</Button></div>
+            <div className="mt-7 border-t pt-6"><h2 className="font-display text-lg font-bold">Malipo</h2><p className="mt-1 text-sm text-muted-foreground">Thibitisha malipo kwenye simu yako baada ya kubonyeza kitufe hapa chini.</p><Button onClick={payWithPush} disabled={(needsDelivery && !distance) || paymentLoading || Boolean(paymentOrderId)} size="lg" className="mt-4 h-12 w-full bg-brand text-brand-foreground hover:bg-brand/90"><Smartphone className="mr-2 h-5 w-5"/>{paymentLoading ? "Inatuma..." : paymentOrderId ? "Malipo yametumwa" : "Lipa sasa"}</Button></div>
           </section>
 
           <aside className="h-fit rounded-2xl border bg-white p-5 shadow-card sm:p-7 lg:sticky lg:top-24">
             <h2 className="font-display text-xl font-bold">Muhtasari wa oda</h2>
             <div className="mt-5 space-y-4">{items.map(item => <div key={item.variantId} className="flex gap-3"><div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-100">{item.product.node.images?.edges?.[0]?.node && <img src={item.product.node.images.edges[0].node.url} alt={item.product.node.title} className="h-full w-full object-cover"/>}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{item.product.node.title}</p><p className="text-xs text-muted-foreground">{item.quantity} × {formatPrice(item.price.amount, currency)}</p></div><p className="text-sm font-semibold">{formatPrice(Number(item.price.amount) * item.quantity, currency)}</p></div>)}</div>
-            <div className="mt-6 space-y-3 border-t pt-5 text-sm"><div className="flex justify-between"><span>Bidhaa</span><strong>{formatPrice(subtotal, currency)}</strong></div><div className="flex justify-between"><span>Delivery</span><strong>{distance ? formatPrice(deliveryFee, currency) : "—"}</strong></div><div className="flex justify-between border-t pt-3 text-lg"><span>Jumla</span><strong>{formatPrice(total, currency)}</strong></div></div>
-            <p className="mt-4 text-xs text-muted-foreground">Button ya malipo itawaka baada ya taarifa zote za delivery na distance kukamilika.</p>
+            <div className="mt-6 space-y-3 border-t pt-5 text-sm"><div className="flex justify-between"><span>Bidhaa</span><strong>{formatPrice(subtotal, currency)}</strong></div>{needsDelivery && <div className="flex justify-between"><span>Delivery</span><strong>{distance ? formatPrice(deliveryFee, currency) : "—"}</strong></div>}<div className="flex justify-between border-t pt-3 text-lg"><span>Jumla</span><strong>{formatPrice(total, currency)}</strong></div></div>
+            <p className="mt-4 text-xs text-muted-foreground">{needsDelivery ? "Malipo yatawezeshwa baada ya kukamilisha taarifa za delivery." : "Unaweza kuendelea na malipo ya bidhaa zako."}</p>
           </aside>
         </div>
       </div>
+      {refundOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="refund-title" onClick={() => setRefundOpen(false)}>
+        <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+          <h2 id="refund-title" className="font-display text-xl font-bold">Refund Policy</h2>
+          <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-700">Kabla hujalipia, hakikisha idadi ya bidhaa ulizochagua na Bei husika ndipo ufanye malipo. Hadi unalipia inamanisha Umekubali Bei na ubora wa bidhaa bila kushurutishwa. kwa Malipo ambayo Yameshalipwa hayatarudishwa Labda Kutokee changamoto ya Upatikanaji wa Bidhaa au Usafirishaji ndipo Pesa Yako itarudishwa.Ukitaka Kurudisha Muamala Uliolipia Wasiliana nasi Kabla ya Kurudisha kupitia Namba yetu ya Whatsapp</p>
+          <p className="mt-3 text-sm font-semibold">WhatsApp: 255615180597</p>
+          <div className="mt-6 flex gap-3"><Button onClick={() => { setRefundAccepted(true); setRefundOpen(false); }} className="flex-1 bg-brand text-brand-foreground">Nimekubali</Button><Button variant="outline" onClick={() => setRefundOpen(false)} className="flex-1">Funga</Button></div>
+        </div>
+      </div>}
     </div>
   );
 }
