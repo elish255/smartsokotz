@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
-import { fetchProducts } from "@/lib/shopify";
 import { getShopflixProducts } from "@/lib/shopflix";
 import { getMyshopProducts } from "@/lib/myshop-products";
 
@@ -9,26 +8,14 @@ export function useProducts(search?: string) {
   return useQuery({
     queryKey: ["products", search ?? ""],
     queryFn: async () => {
-      // The imported MyShop and Shopflix catalogs are local and do not depend on
-      // Shopify, network access, or API credentials to render names, images, and prices.
-      const localProducts = [...getMyshopProducts(), ...getShopflixProducts()];
-      let shopifyProducts: Awaited<ReturnType<typeof fetchProducts>> = [];
-
-      // Shopify is optional. A failed/unconfigured Storefront API must not hide
-      // products already bundled with the site.
-      try {
-        shopifyProducts = await fetchProducts(50, search || undefined);
-      } catch (error) {
-        console.warn("Shopify products unavailable; showing local catalog instead.", error);
-      }
-
-      const combined = [...shopifyProducts, ...localProducts];
+      // The store's imported catalog is local. Do not call Shopify directly from
+      // the browser: Shopify's CORS/preflight response was failing on this domain.
+      const combined = [...getMyshopProducts(), ...getShopflixProducts()];
       const unique = Array.from(
         new Map(combined.map((product) => [product.node.id, product])).values(),
       );
       const q = search?.trim().toLowerCase();
       if (!q) return unique;
-
       return unique.filter((product) =>
         `${product.node.title} ${product.node.vendor ?? ""} ${product.node.productType ?? ""}`
           .toLowerCase()

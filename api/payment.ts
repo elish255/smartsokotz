@@ -4,9 +4,9 @@ type Req = IncomingMessage & { body?: unknown };
 type Res = ServerResponse & { statusCode: number; json: (body: unknown) => void };
 type Obj = Record<string, any>;
 
-const SUPABASE_URL = process.env["SUPABASE_URL"]?.replace(/\/$/, "");
+const SUPABASE_URL = (process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"])?.replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SECRET_KEY"] || process.env["SUPABASE_SERVICE_ROLE_KEY"];
-const SUPABASE_PUBLISHABLE_KEY = process.env["SUPABASE_PUBLISHABLE_KEY"];
+const SUPABASE_PUBLISHABLE_KEY = process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
 const PAYMENT_API_KEY = process.env["FIMIPAY_API_KEY"];
 const PAYMENT_CURRENCY = process.env["FIMIPAY_CURRENCY"] || "TZS";
 const CREATE_URL = process.env["FIMIPAY_CREATE_PAYMENT_URL"] || "https://fimipay.com/api/v1/payment/create_order";
@@ -16,7 +16,7 @@ function send(res: Res, body: unknown, status = 200) { res.statusCode = status; 
 function firstString(...values: unknown[]) { for (const v of values) { if (typeof v === "string" && v.trim()) return v.trim(); if (typeof v === "number") return String(v); } return undefined; }
 function obj(v: unknown): Obj { return v && typeof v === "object" && !Array.isArray(v) ? v as Obj : {}; }
 function orderIdOf(payload: Obj) { const d = obj(payload["data"]); return firstString(payload["order_id"], payload["orderId"], d["order_id"], d["orderId"], d["reference"], d["transaction_id"]); }
-function statusOf(payload: Obj) { const d = obj(payload["data"]); return firstString(d["payment_status"], d["order_status"], payload["payment_status"], payload["order_status"])?.toLowerCase(); }
+function statusOf(payload: Obj) { const d = obj(payload["data"]); return firstString(d["payment_status"], d["order_status"], d["status"], payload["payment_status"], payload["order_status"], payload["status"])?.toLowerCase(); }
 function failed(status?: string) { return !!status && ["cancelled","usercancelled","rejected","failed","failure","expired","declined"].includes(status); }
 async function bodyOf(req: Req): Promise<Obj> { if (req.body && typeof req.body === "object") return req.body as Obj; return new Promise((resolve, reject) => { let raw=""; req.setEncoding("utf8"); req.on("data", (c:string)=>raw+=c); req.on("end",()=>{try{resolve(raw?JSON.parse(raw):{})}catch{reject(new Error("Invalid JSON"))}}); req.on("error",reject); }); }
 function bearer(req: Req) { const v=req.headers.authorization; return Array.isArray(v)?v[0]:v; }
@@ -31,43 +31,91 @@ async function currentUser(token: string) {
   const d:any=await r.json(); if(!r.ok||!d["id"]) throw new Error("Login session imekwisha. Ingia tena."); return d;
 }
 async function provider(url: string, payload: Obj) {
-  if (!PAYMENT_API_KEY) throw new Error("Payment service is not configured.");
-  const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json","Authorization":`Bearer ${PAYMENT_API_KEY}`},body:JSON.stringify(payload)});
-  const t=await r.text(); let d:Obj={}; try{d=t?JSON.parse(t):{}}catch{d={raw:t}}; if(!r.ok) throw new Error(`Payment provider HTTP ${r.status}`); return d;
+  if (!PAYMENT_API_KEY) throw new Error("Malipo hayajaunganishwa kwa sasa. Tafadhali wasiliana na msaada wa SMART SOKO.");
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${PAYMENT_API_KEY}` },
+    body: JSON.stringify(payload),
+  });
+  const t = await r.text();
+  let d: Obj = {};
+  try { d = t ? JSON.parse(t) : {}; } catch { d = { message: t }; }
+  if (!r.ok) {
+    const message = firstString(d["message"], d["error"], d["detail"]);
+    throw new Error(message ? `Mtoa huduma wa malipo amekataa ombi (HTTP ${r.status}): ${message}` : `Mtoa huduma wa malipo amekataa ombi (HTTP ${r.status}).`);
+  }
+  return d;
 }
 
 export default async function handler(req: Req, res: Res) {
   if(req.method!=="POST") return send(res,{ok:false,error:"Method not allowed"},405);
+  let stage = "kuhakiki akaunti";
   try {
-    const auth=bearer(req); if(!auth?.startsWith("Bearer ")) throw new Error("Login session is required");
-    const token=auth.slice(7).trim(); const user=await currentUser(token); const b=await bodyOf(req); const action=String(b["action"]||"create");
-    const profiles=await supa(`rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,full_name,phone` ,{}, token); const profile=profiles?.[0];
-    if(!profile) throw new Error("User profile haijapatikana.");
+    const auth=bearer(req);
+    const token=auth?.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+    const user=token ? await currentUser(token) : null;
+    const b=await bodyOf(req); const action=String(b["action"]||"create");
+    if (!user) throw new Error("Tafadhali ingia kwenye akaunti yako ya SMART SOKO kabla ya kulipia.");
+    let profile: Obj | null = null;
+    try {
+      const profiles = await supa(`rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,full_name,phone`, {}, token);
+      profile = profiles?.[0] || null;
+    } catch (profileError) {
+      // User metadata still contains registration name/phone in the standard flow.
+      console.warn("Could not read SMART SOKO profile; using auth metadata.", profileError);
+    }
 
     if(action==="create") {
+      stage = "kuhifadhi oda";
       const amount=Math.round(Number(b["amount"])); if(!Number.isFinite(amount)||amount<=0) throw new Error("Kiasi cha malipo si sahihi.");
-      const phone=String(b["phone"]||profile.phone||"").replace(/[^0-9+]/g,"");
-      if(phone.length<9) throw new Error("Weka namba sahihi ya simu.");
-      const orderRows=await supa("rest/v1/orders",{method:"POST",body:JSON.stringify({user_id:user.id,status:"payment_pending",payment_status:"pending",subtotal:Number(b["subtotal"]||0),delivery_fee:Number(b["deliveryFee"]||0),total:amount,currency:PAYMENT_CURRENCY,delivery_full_name:String(b["deliveryFullName"]||profile.full_name||""),delivery_region:String(b["region"]||""),delivery_district:String(b["district"]||""),delivery_place:String(b["place"]||""),delivery_distance_km:Number(b["distanceKm"]||0),delivery_rate_per_km:2000,customer_phone:phone})});
-      const order=orderRows?.[0]; if(!order?.id) throw new Error("Oda haikuweza kuhifadhiwa.");
+      const fullName=String(profile?.full_name||user.user_metadata?.full_name||"").trim();
+      if(!fullName) throw new Error("Jina halipo kwenye akaunti yako. Rekebisha taarifa za akaunti au wasiliana na WhatsApp.");
+      const phone=String(b["phone"]||profile?.phone||user.phone||user.user_metadata?.phone||"").replace(/[^0-9+]/g,"");
+      if(phone.replace(/\D/g,"").length<9) throw new Error("Weka namba sahihi ya simu.");
       const rawItems = Array.isArray(b["items"]) ? b["items"] : [];
       if (!rawItems.length) throw new Error("Kikapu hakina bidhaa.");
+      const orderRows=await supa("rest/v1/orders",{method:"POST",body:JSON.stringify({user_id:user.id,status:"payment_pending",payment_status:"pending",subtotal:Number(b["subtotal"]||amount),delivery_fee:0,total:amount,currency:PAYMENT_CURRENCY,delivery_full_name:fullName,delivery_region:"",delivery_district:"",delivery_place:"",delivery_distance_km:0,delivery_rate_per_km:0,customer_phone:phone})});
+      const order=orderRows?.[0]; if(!order?.id) throw new Error("Oda haikuweza kuhifadhiwa.");
       await supa("rest/v1/order_items", { method: "POST", body: JSON.stringify(rawItems.map((item: any) => ({ order_id: order.id, product_id: String(item.productId || item.variantId || ""), product_title: String(item.title || "Bidhaa"), variant_id: String(item.variantId || ""), quantity: Number(item.quantity || 1), unit_price: Number(item.unitPrice || 0), line_total: Number(item.lineTotal || 0), image_url: item.imageUrl || null }))) });
-      const providerResponse=await provider(CREATE_URL,{buyer_email:user.email||"",buyer_name:String(b["deliveryFullName"]||profile.full_name||"SMART SOKO Customer"),buyer_phone:phone,amount,currency:PAYMENT_CURRENCY,payment_method:"mobile"});
-      if(String(providerResponse["status"]||"").toLowerCase()!=="success") throw new Error(firstString(providerResponse["message"],providerResponse["error"])||"Imeshindikana kuanzisha malipo.");
-      const providerData=obj(providerResponse["data"]); const providerOrderId=firstString(providerResponse["order_id"],providerResponse["orderId"],providerData["order_id"],providerData["orderId"],providerData["reference"],providerData["transaction_id"]); if(!providerOrderId) throw new Error("Mtoa huduma wa malipo hakurudisha namba ya oda.");
+      stage = "kuanzisha malipo kwenye simu";
+      const providerResponse = await provider(CREATE_URL, {
+        buyer_email: user.email || "",
+        buyer_name: fullName,
+        buyer_phone: phone,
+        amount,
+        currency: PAYMENT_CURRENCY,
+        payment_method: "mobile",
+      });
+      const providerData = obj(providerResponse["data"]);
+      const providerStatus = firstString(providerResponse["status"], providerData["status"])?.toLowerCase();
+      const providerOrderId = firstString(
+        providerResponse["order_id"], providerResponse["orderId"], providerData["order_id"],
+        providerData["orderId"], providerData["reference"], providerData["transaction_id"],
+        obj(providerData["order"])["id"], obj(providerResponse["order"])["id"], providerData["id"],
+      );
+      const explicitFailure = providerResponse["success"] === false ||
+        (providerStatus && ["failed", "failure", "error", "rejected"].includes(providerStatus));
+      if (explicitFailure) throw new Error(firstString(providerResponse["message"], providerResponse["error"], providerData["message"]) || "Mtoa huduma wa malipo amekataa ombi.");
+      if (!providerOrderId) throw new Error(firstString(providerResponse["message"], providerResponse["error"]) || "Imeshindikana kuanzisha ombi la malipo. Tafadhali jaribu tena baadaye au wasiliana na msaada wa SMART SOKO.");
       await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_provider:"fimipay",payment_order_id:providerOrderId,payment_response:providerResponse,status:"payment_processing"})});
       return send(res,{ok:true,orderId:order.id,paymentOrderId:providerOrderId,status:"processing",message:"Push imetumwa. Thibitisha malipo kwenye simu yako."});
     }
 
     if(action==="status") {
+      stage = "kukagua hali ya malipo";
       const orderId=String(b["orderId"]||""); if(!orderId) throw new Error("orderId inahitajika.");
-      const orders=await supa(`rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*`); const order=orders?.[0]; if(!order) throw new Error("Oda haipatikani.");
-      if(order.payment_status==="paid") return send(res,{ok:true,paid:true,status:"success",order});
+      const orders=await supa(`rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&select=*`); const order=orders?.[0]; if(!order) throw new Error("Oda haipatikani.");
+      // Orders are only accessible by the authenticated account that created them.
+      if(!user || order.user_id !== user.id) throw new Error("Oda haipatikani.");
+      if(order.payment_status==="paid") return send(res,{ok:true,paid:true,status:"success",order:{payment_status:"paid"}});
       const p=await provider(STATUS_URL,{order_id:order.payment_order_id}); const ps=statusOf(p)||"pending";
-      if(ps==="success") { await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_status:"paid",status:"paid",payment_response:p,paid_at:new Date().toISOString()})}); return send(res,{ok:true,paid:true,status:ps,order:{...order,payment_status:"paid",status:"paid"}}); }
-      const next=failed(ps)?"failed":"processing"; await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_status:next,status:`payment_${next}`,payment_response:p})}); return send(res,{ok:true,paid:false,status:ps,order:{...order,payment_status:next}});
+      if(["success", "successful", "completed", "paid"].includes(ps)) { await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_status:"paid",status:"paid",payment_response:p,paid_at:new Date().toISOString()})}); return send(res,{ok:true,paid:true,status:ps,order:{payment_status:"paid"}}); }
+      const next=failed(ps)?"failed":"processing"; await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_status:next,status:`payment_${next}`,payment_response:p})}); return send(res,{ok:true,paid:false,status:ps,order:{payment_status:next}});
     }
     throw new Error("Unknown action");
-  } catch(error) { console.error("SMART SOKO payment error", error); return send(res,{ok:false,error:"Imeshindikana kukamilisha malipo. Tafadhali jaribu tena."},400); }
+  } catch(error) {
+    const message = error instanceof Error ? error.message : "Hitilafu isiyojulikana.";
+    console.error("SMART SOKO payment error at stage:", stage, error);
+    return send(res, { ok: false, stage, error: message || "Imeshindikana kukamilisha malipo. Tafadhali jaribu tena." }, 400);
+  }
 }

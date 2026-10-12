@@ -17,12 +17,17 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => { if (user) navigate({ to: "/checkout" }); }, [user, navigate]);
+  const postAuthDestination = (): "/" | "/checkout" => {
+    try {
+      return sessionStorage.getItem("smart-soko-open-cart-after-auth") === "1" ? "/" : "/checkout";
+    } catch { return "/checkout"; }
+  };
+  useEffect(() => { if (user) navigate({ to: postAuthDestination() }); }, [user, navigate]);
   if (user) return null;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setMessage(null);
-    try { await signIn(email.trim(), password); await refresh(); navigate({ to: "/checkout" }); }
+    try { await signIn(email.trim(), password); await refresh(); navigate({ to: postAuthDestination() }); }
     catch (error) { setMessage(error instanceof Error ? error.message : "Email au password si sahihi."); }
     finally { setBusy(false); }
   };

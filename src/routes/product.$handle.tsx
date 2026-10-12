@@ -5,7 +5,7 @@ import { ArrowLeft, Loader2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
-import { fetchProductByHandle, formatPrice } from "@/lib/shopify";
+import { formatPrice } from "@/lib/shopify";
 import { getShopflixProductByHandle } from "@/lib/shopflix";
 import { getMyshopProducts } from "@/lib/myshop-products";
 
@@ -36,13 +36,8 @@ function ProductPage() {
       const localProduct = getMyshopProducts().find((product) => product.node.handle === handle) ?? getShopflixProductByHandle(handle);
       if (localProduct) return localProduct;
 
-      // Remote product lookup is optional; a Shopify outage should not crash local products.
-      try {
-        return (await fetchProductByHandle(handle)) ?? null;
-      } catch (error) {
-        console.warn("Unable to load remote Shopify product.", error);
-        return null;
-      }
+      // This storefront uses the imported local catalog to avoid Shopify CORS failures.
+      return null;
     },
   });
   const addItem = useCartStore((state) => state.addItem);

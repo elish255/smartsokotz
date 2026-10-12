@@ -1,16 +1,9 @@
-# SMART SOKO — Account, Delivery & Payment setup
+# SMART SOKO — Account & Payment setup
 
 ## 1. Supabase
 Run `supabase/SMART_SOKO_SHARED.sql` once in the Supabase project you want SMART SOKO to use.
 
-It creates:
-- `profiles` for registered customers
-- `delivery_addresses` for saved delivery addresses
-- `orders` and `order_items` for checkout history
-- an `auth.users` trigger that automatically creates/updates the customer profile
-- RLS policies so customers can only read their own records
-
-The app uses Supabase Auth email/password. Full name and phone are stored in `profiles`.
+It creates `profiles`, `orders`, `order_items`, the profile trigger, and RLS policies. Guest checkout requires `user_id` in `orders` to allow NULL, so run `supabase/SMART_SOKO_GUEST_CHECKOUT.sql` once after the shared schema is installed. Existing registered orders remain linked to their users.
 
 ## 2. Vercel variables
 Browser-safe:
@@ -29,31 +22,11 @@ Server-only:
 
 Do not prefix secret keys with `VITE_`.
 
-## 3. Delivery
-Delivery origin is Kariakoo Market, Dar es Salaam.
+## 3. Cart + checkout
+The cart is stored in browser localStorage and supports products from every catalog without depending on an external Shopify cart. Customers do not need to register or log in to pay. Checkout only asks for full name and the phone number to receive the mobile-money payment push. Delivery distance and delivery charges are not calculated.
 
-Delivery uses configured district distance estimates and does not require an external maps API.
-Rate: `TZS 2,000 / km`, rounded up to the next whole kilometre.
-For Dar es Salaam, minimum delivery fees are:
-- Ilala: 5,000
-- Kinondoni: 7,000
-- Temeke: 10,000
-- Ubungo: 7,000
-- Kigamboni: 12,000
-
-For other regions, the region minimum in `src/data/tanzania.ts` is used. The distance calculation can still produce a higher amount.
-
-The Pay button remains disabled until the delivery details are complete and the delivery estimate is calculated.
-
-## 4. Cart + registration
-The cart is persisted in browser localStorage. If a visitor presses `Weka kikapuni` while not logged in:
-1. the selected product is stored as a pending cart item;
-2. the visitor is sent to `/register`;
-3. after login, the pending product is automatically added to the cart;
-4. leaving and returning to the site keeps the local cart.
-
-## 5. Payment
-The checkout payment service is used only for the payment push. The request contains the final product subtotal + delivery fee.
+## 4. Payment
+The checkout payment service starts the payment push for the product subtotal only; there is no delivery-distance step.
 Payment status is checked through the provider order-status endpoint.
 
 ## Registration error repair

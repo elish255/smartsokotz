@@ -8,15 +8,16 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { ShoppingCart, Minus, Plus, Trash2, Loader2 } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
+import { useAuth } from "@/hooks/useAuth";
 
 export function CartDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const { items, isLoading, isSyncing, updateQuantity, removeItem, syncCart } =
     useCartStore();
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -30,6 +31,26 @@ export function CartDrawer() {
     if (isOpen) syncCart();
   }, [isOpen, syncCart]);
 
+  // If a signed-out visitor tapped the cart, return them to the cart after
+  // registration/login instead of sending them directly to checkout.
+  useEffect(() => {
+    if (!user || typeof window === "undefined") return;
+    if (sessionStorage.getItem("smart-soko-open-cart-after-auth") === "1") {
+      sessionStorage.removeItem("smart-soko-open-cart-after-auth");
+      setIsOpen(true);
+    }
+  }, [user]);
+
+  const handleCartButton = () => {
+    if (authLoading) return;
+    if (!user) {
+      try { sessionStorage.setItem("smart-soko-open-cart-after-auth", "1"); } catch {}
+      navigate({ to: "/register" });
+      return;
+    }
+    setIsOpen(true);
+  };
+
   const handleCheckout = () => {
     if (items.length === 0 || isLoading || isSyncing) return;
     setIsOpen(false);
@@ -38,16 +59,23 @@ export function CartDrawer() {
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
-          <ShoppingCart className="h-5 w-5" />
-          {totalItems > 0 && (
-            <Badge className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand p-0 text-xs text-brand-foreground">
-              {totalItems}
-            </Badge>
-          )}
-        </Button>
-      </SheetTrigger>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="relative"
+        onClick={handleCartButton}
+        disabled={authLoading}
+        aria-label={user ? "Fungua kikapu" : "Jisajili au ingia ili kufungua kikapu"}
+        title={user ? "Fungua kikapu" : "Jisajili kwanza ili kufungua kikapu"}
+      >
+        <ShoppingCart className="h-5 w-5" />
+        {totalItems > 0 && (
+          <Badge className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand p-0 text-xs text-brand-foreground">
+            {totalItems}
+          </Badge>
+        )}
+      </Button>
       <SheetContent className="flex h-full w-full flex-col sm:max-w-lg">
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="font-display">Kikapu chako</SheetTitle>

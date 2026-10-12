@@ -1,0 +1,14 @@
+SMART SOKO — PAYMENT SETUP
+
+Vercel > Project > Settings > Environment Variables:
+- SUPABASE_URL (or VITE_SUPABASE_URL) = your Supabase project URL
+- SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) = your Supabase publishable/anon key
+- SUPABASE_SECRET_KEY = Supabase secret/service-role key (server-side only; NEVER use VITE_ prefix)
+- FIMIPAY_API_KEY = live/test payment API key
+- FIMIPAY_CREATE_PAYMENT_URL = the exact create-order endpoint from your payment provider docs
+- FIMIPAY_ORDER_STATUS_URL = the exact order-status endpoint from your payment provider docs
+- FIMIPAY_CURRENCY = TZS (optional)
+
+After changing environment variables, redeploy the project. Never paste secret keys into frontend code or public GitHub files.
+
+The browser no longer calls Shopify Storefront API directly for product listing/details; it uses the bundled local MyShop + Shopflix catalogs to avoid the reported Shopify CORS preflight failure.

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -23,7 +23,12 @@ function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => { if (user) navigate({ to: "/checkout" }); }, [user, navigate]);
+  const postAuthDestination = (): "/" | "/checkout" => {
+    try {
+      return sessionStorage.getItem("smart-soko-open-cart-after-auth") === "1" ? "/" : "/checkout";
+    } catch { return "/checkout"; }
+  };
+  useEffect(() => { if (user) navigate({ to: postAuthDestination() }); }, [user, navigate]);
   if (user) return null;
 
   const submit = async (event: FormEvent) => {
@@ -34,8 +39,9 @@ function RegisterPage() {
     try {
       const data = await signUp({ fullName: fullName.trim(), phone: phone.trim(), email: email.trim(), password });
       if (data.access_token) {
+        await refresh();
         toast.success("Akaunti imefunguliwa");
-        navigate({ to: "/checkout" });
+        navigate({ to: postAuthDestination() });
       } else {
         setMessage("Akaunti imeundwa. Angalia email yako kuthibitisha akaunti, kisha ingia.");
       }
