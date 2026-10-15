@@ -14,10 +14,9 @@ Server-only:
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY` OR `SUPABASE_SERVICE_ROLE_KEY`
-- `FIMIPAY_API_KEY` (server-side payment provider key)
-- `FIMIPAY_CURRENCY=TZS` (server-side)
-- `FIMIPAY_CREATE_PAYMENT_URL=https://fimipay.com/api/v1/payment/create_order` (server-side)
-- `FIMIPAY_ORDER_STATUS_URL=https://fimipay.com/api/v1/payment/order_status` (server-side)
+- `SPLASHPAY_API_KEY` (server-side SplashPay API key)
+- `SPLASHPAY_API_SECRET` (server-side SplashPay API secret)
+- Payment endpoints are configured in `api/payment.ts`; no webhook is used.
 
 
 Do not prefix secret keys with `VITE_`.
@@ -27,7 +26,7 @@ The cart is stored in browser localStorage and supports products from every cata
 
 ## 4. Payment
 The checkout payment service starts the payment push for the product subtotal only; there is no delivery-distance step.
-Payment status is checked through the provider order-status endpoint.
+Payment status is checked through the SplashPay `payments/check-status` endpoint.
 
 ## Registration error repair
 

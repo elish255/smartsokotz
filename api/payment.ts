@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 type Req = IncomingMessage & { body?: unknown };
@@ -7,10 +8,10 @@ type Obj = Record<string, any>;
 const SUPABASE_URL = (process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"])?.replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SECRET_KEY"] || process.env["SUPABASE_SERVICE_ROLE_KEY"];
 const SUPABASE_PUBLISHABLE_KEY = process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
-const PAYMENT_API_KEY = process.env["FIMIPAY_API_KEY"];
-const PAYMENT_CURRENCY = process.env["FIMIPAY_CURRENCY"] || "TZS";
-const CREATE_URL = process.env["FIMIPAY_CREATE_PAYMENT_URL"] || "https://fimipay.com/api/v1/payment/create_order";
-const STATUS_URL = process.env["FIMIPAY_ORDER_STATUS_URL"] || "https://fimipay.com/api/v1/payment/order_status";
+const SPLASHPAY_API_KEY = process.env["SPLASHPAY_API_KEY"];
+const SPLASHPAY_API_SECRET = process.env["SPLASHPAY_API_SECRET"];
+const SPLASHPAY_BASE_URL = "https://api.splashpay.co.tz/api/v1";
+const PAYMENT_CURRENCY = "TZS";
 
 function send(res: Res, body: unknown, status = 200) { res.statusCode = status; res.setHeader("Content-Type", "application/json; charset=utf-8"); res.setHeader("Cache-Control", "no-store"); res.end(JSON.stringify(body)); }
 function firstString(...values: unknown[]) { for (const v of values) { if (typeof v === "string" && v.trim()) return v.trim(); if (typeof v === "number") return String(v); } return undefined; }
@@ -30,19 +31,17 @@ async function currentUser(token: string) {
   const r=await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` } });
   const d:any=await r.json(); if(!r.ok||!d["id"]) throw new Error("Login session imekwisha. Ingia tena."); return d;
 }
-async function provider(url: string, payload: Obj) {
-  if (!PAYMENT_API_KEY) throw new Error("Malipo hayajaunganishwa kwa sasa. Tafadhali wasiliana na msaada wa SMART SOKO.");
-  const r = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Bearer ${PAYMENT_API_KEY}` },
-    body: JSON.stringify(payload),
-  });
-  const t = await r.text();
-  let d: Obj = {};
+async function provider(path: string, payload: Obj, idempotencyKey?: string) {
+  if (!SPLASHPAY_API_KEY || !SPLASHPAY_API_SECRET) throw new Error("Huduma ya malipo ya SplashPay haijawekwa sawa. Wasiliana na huduma kwa wateja.");
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", "X-API-KEY": SPLASHPAY_API_KEY, "X-API-SECRET": SPLASHPAY_API_SECRET };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+  const r = await fetch(`${SPLASHPAY_BASE_URL}${path}`, { method: "POST", headers, body: JSON.stringify(payload) });
+  const t = await r.text(); let d: Obj = {};
   try { d = t ? JSON.parse(t) : {}; } catch { d = { message: t }; }
   if (!r.ok) {
-    const message = firstString(d["message"], d["error"], d["detail"]);
-    throw new Error(message ? `Mtoa huduma wa malipo amekataa ombi (HTTP ${r.status}): ${message}` : `Mtoa huduma wa malipo amekataa ombi (HTTP ${r.status}).`);
+    const errors = obj(d["errors"]); const phoneError = Array.isArray(errors["phone"]) ? errors["phone"].join(", ") : undefined;
+    const message = firstString(d["message"], d["error"], phoneError);
+    throw new Error(message ? `SplashPay imekataa ombi (HTTP ${r.status}): ${message}` : `SplashPay imekataa ombi (HTTP ${r.status}).`);
   }
   return d;
 }
@@ -78,27 +77,27 @@ export default async function handler(req: Req, res: Res) {
       const order=orderRows?.[0]; if(!order?.id) throw new Error("Oda haikuweza kuhifadhiwa.");
       await supa("rest/v1/order_items", { method: "POST", body: JSON.stringify(rawItems.map((item: any) => ({ order_id: order.id, product_id: String(item.productId || item.variantId || ""), product_title: String(item.title || "Bidhaa"), variant_id: String(item.variantId || ""), quantity: Number(item.quantity || 1), unit_price: Number(item.unitPrice || 0), line_total: Number(item.lineTotal || 0), image_url: item.imageUrl || null }))) });
       stage = "kuanzisha malipo kwenye simu";
-      const providerResponse = await provider(CREATE_URL, {
-        buyer_email: user.email || "",
-        buyer_name: fullName,
-        buyer_phone: phone,
-        amount,
-        currency: PAYMENT_CURRENCY,
-        payment_method: "mobile",
-      });
+      const reference = `INV-${randomUUID()}`;
+      let providerResponse: Obj;
+      try {
+        providerResponse = await provider("/payments/mobile-money", {
+          amount, currency: PAYMENT_CURRENCY, reference, phone,
+          customer_name: fullName,
+          customer_email: user.email || `${String(user.id).slice(0, 8)}@smartsoko.local`,
+          metadata: { user_id: user.id, order_id: order.id },
+        }, reference);
+      } catch (paymentError) {
+        await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`, { method: "PATCH", body: JSON.stringify({ payment_provider: "splashpay", payment_order_id: reference, payment_status: "failed", status: "payment_failed" }) });
+        throw paymentError;
+      }
       const providerData = obj(providerResponse["data"]);
       const providerStatus = firstString(providerResponse["status"], providerData["status"])?.toLowerCase();
-      const providerOrderId = firstString(
-        providerResponse["order_id"], providerResponse["orderId"], providerData["order_id"],
-        providerData["orderId"], providerData["reference"], providerData["transaction_id"],
-        obj(providerData["order"])["id"], obj(providerResponse["order"])["id"], providerData["id"],
-      );
-      const explicitFailure = providerResponse["success"] === false ||
-        (providerStatus && ["failed", "failure", "error", "rejected"].includes(providerStatus));
-      if (explicitFailure) throw new Error(firstString(providerResponse["message"], providerResponse["error"], providerData["message"]) || "Mtoa huduma wa malipo amekataa ombi.");
-      if (!providerOrderId) throw new Error(firstString(providerResponse["message"], providerResponse["error"]) || "Imeshindikana kuanzisha ombi la malipo. Tafadhali jaribu tena baadaye au wasiliana na msaada wa SMART SOKO.");
-      await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_provider:"fimipay",payment_order_id:providerOrderId,payment_response:providerResponse,status:"payment_processing"})});
-      return send(res,{ok:true,orderId:order.id,paymentOrderId:providerOrderId,status:"processing",message:"Push imetumwa. Thibitisha malipo kwenye simu yako."});
+      if (providerResponse["success"] === false || (providerStatus && ["failed", "failure", "error", "rejected"].includes(providerStatus))) {
+        await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`, { method: "PATCH", body: JSON.stringify({ payment_provider: "splashpay", payment_order_id: reference, payment_status: "failed", status: "payment_failed", payment_response: providerResponse }) });
+        throw new Error(firstString(providerResponse["message"], providerResponse["error"], providerData["message"]) || "SplashPay imeshindwa kuanzisha malipo.");
+      }
+      await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`, { method: "PATCH", body: JSON.stringify({ payment_provider: "splashpay", payment_order_id: reference, payment_response: providerResponse, status: "payment_processing" }) });
+      return send(res, { ok: true, orderId: order.id, paymentOrderId: reference, reference, status: "processing", message: "Ombi limetumwa. Thibitisha malipo kwenye simu yako." });
     }
 
     if(action==="status") {
@@ -108,8 +107,13 @@ export default async function handler(req: Req, res: Res) {
       // Orders are only accessible by the authenticated account that created them.
       if(!user || order.user_id !== user.id) throw new Error("Oda haipatikani.");
       if(order.payment_status==="paid") return send(res,{ok:true,paid:true,status:"success",order:{payment_status:"paid"}});
-      const p=await provider(STATUS_URL,{order_id:order.payment_order_id}); const ps=statusOf(p)||"pending";
-      if(["success", "successful", "completed", "paid"].includes(ps)) { await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_status:"paid",status:"paid",payment_response:p,paid_at:new Date().toISOString()})}); return send(res,{ok:true,paid:true,status:ps,order:{payment_status:"paid"}}); }
+      const p=await provider("/payments/check-status", { reference: order.payment_order_id }); const pData=obj(p["data"]); const ps=firstString(pData["status"], p["payment_status"], p["status"])?.toLowerCase() || "pending";
+      if (["success", "successful", "completed", "paid"].includes(ps)) {
+        const returnedReference = firstString(pData["reference"], pData["merchant_reference"]);
+        if ((pData["amount"] !== undefined && Number(pData["amount"]) !== Number(order.total)) || (pData["currency"] && String(pData["currency"]).toUpperCase() !== "TZS") || (returnedReference && returnedReference !== order.payment_order_id)) throw new Error("Taarifa za malipo hazilingani na oda hii. Wasiliana na huduma kwa wateja.");
+        await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`, { method: "PATCH", body: JSON.stringify({ payment_status: "paid", status: "paid", payment_response: p, paid_at: new Date().toISOString() }) });
+        return send(res, { ok: true, paid: true, status: ps, order: { payment_status: "paid" } });
+      }
       const next=failed(ps)?"failed":"processing"; await supa(`rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`,{method:"PATCH",body:JSON.stringify({payment_status:next,status:`payment_${next}`,payment_response:p})}); return send(res,{ok:true,paid:false,status:ps,order:{payment_status:next}});
     }
     throw new Error("Unknown action");
